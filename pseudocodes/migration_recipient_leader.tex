@@ -1,0 +1,38 @@
+\begin{algorithm}[H]
+\footnotesize
+\caption{Recipient Leader Handling of Migrated Data}
+\begin{algorithmic}[1]
+\Statex \textbf{upon} RECEIVE PREPARE($G_i$, metadata) \textbf{from} donor\_leader \textbf{do}
+  \State buffers $\leftarrow$ ALLOCATE\_BUFFERS($G_i$, metadata)
+  \State REGISTER\_RDMA(buffers)
+  \State STORE\_METADATA($G_i$, metadata, buffers)
+  \State SEND\_CONTROL(donor\_leader, PREPARE\_OK($G_i$))
+\Statex \textbf{end upon}
+
+\Statex
+
+\Statex \textbf{upon} RECEIVE RDMA\_DONE($G_i$) \textbf{from} donor\_leader \textbf{do}
+  \Statex \textit{// Phase 1: Fast path replication}
+  \State acks $\leftarrow \emptyset$
+  \For{each replica $r$ in RECIPIENT\_GROUP}
+    \State SEND\_CONTROL($r$, REPLICA\_PREPARE($G_i$, buffers))
+  \EndFor
+  \While{$|\text{acks}| < \text{MAJORITY}$}
+    \State $r \leftarrow$ WAIT\_CONTROL(REPLICA\_ACK)
+    \State acks $\leftarrow$ acks $\cup \{r\}$
+  \EndWhile
+  
+  \Statex \textit{// Majority has the data}
+  \State RAFT\_APPEND\_LOG($G_i$\_MAJORITY\_READY)
+  \State RAFT\_COMMIT()
+  \State ENABLE\_READS\_FROM\_RECIPIENT($G_i$)
+  \State SEND\_CONTROL(donor\_leader, MAJORITY\_REPLICATED($G_i$))
+  
+  \Statex \textit{// Phase 2: Slow path (async)}
+  \For{each replica $r$ not in acks}
+    \State ASYNC\_SEND\_CONTROL($r$, REPLICA\_SYNC($G_i$))
+  \EndFor
+\Statex \textbf{end upon}
+\end{algorithmic}
+\normalsize
+\end{algorithm}

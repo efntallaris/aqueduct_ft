@@ -1,0 +1,33 @@
+% \definecolor{darkGray}{HTML}{0d0d0d}
+% \definecolor{medGray}{HTML}{262626}
+% \definecolor{lightGray}{HTML}{595959}
+% \definecolor{line}{HTML}{bababa}
+\definecolor{customColor1}{HTML}{B3C5E3}
+\definecolor{customColor2}{HTML}{1B2944}
+\definecolor{customColor3}{HTML}{7A944A}
+\definecolor{customColor4}{HTML}{3D4A25}
+\definecolor{customColor5}{RGB}{252,251,244}
+
+\definecolor{darkGray}{HTML}{0d0d0d}
+\definecolor{medGray}{HTML}{d9e1c3}
+\definecolor{lightGray}{HTML}{d9e1c3}
+
+\definecolor{line}{HTML}{1B2944}
+
+\begin{tikzpicture}[font=\sffamily\bfseries, node distance=0cm]
+
+% Define the styles for the blocks
+\tikzstyle{segment} = [rectangle, thick, line width=0.5mm, draw=line, text centered, text=customColor2, minimum height=3cm, minimum width=3cm, font=\sffamily\bfseries\fontsize{18}{20}\selectfont]
+
+\tikzstyle{header} = [segment, fill=medGray, minimum width=4cm]
+\tikzstyle{inner_segment} = [segment, fill=lightGray, minimum width=4cm]
+\tikzstyle{footer} = [segment, fill=medGray, minimum width=4cm]
+
+% Nodes
+\node (segment_header) [header, align=center] {Segment \\ Header \\ 4 bytes};
+\node (next_ptr) [inner_segment, right=of segment_header, align=center] {Next Ptr\\ 4 bytes};
+\node (prev_ptr) [inner_segment, right=of next_ptr, align=center] {Prev Ptr\\ 4 bytes};
+\node (segment_footer) [footer, right= of prev_ptr, align=center] {Segment \\ Footer \\ 4 bytes};
+
+\end{tikzpicture}
+

@@ -1,0 +1,26 @@
+\begin{algorithm}[H]
+\footnotesize
+\caption{MIGRATE\_GROUP (Leader-to-Leader)}
+\begin{algorithmic}[1]
+\Procedure{MIGRATE\_GROUP}{$G_i$, $L_r$}
+  \State RAFT\_APPEND($G_i$\_START)
+  \State RAFT\_COMMIT()
+  
+  \State $B_s \leftarrow$ ALLOCATOR.get\_blocks($G_i$.slots)
+  \State $M_s \leftarrow$ REGISTER\_RDMA($B_s$)
+  \State SEND($L_r$, PREPARE($G_i$, meta($M_s$)))
+  \State $M_d \leftarrow$ WAIT($L_r$, PREPARE\_OK)
+  
+  \For{$(m_s, m_d)$ in ZIP($M_s$, $M_d$)}
+    \State RDMA\_WRITE($m_s$.addr, $m_d$.addr, $m_s$.size, $m_d$.rkey)
+  \EndFor
+  \State WAIT\_RDMA($G_i$)
+  
+  \State SEND($L_r$, RDMA\_DONE($G_i$))
+  \State WAIT($L_r$, MAJORITY\_REPLICATED($G_i$))
+  \State RAFT\_APPEND($G_i$\_DONE)
+  \State RAFT\_COMMIT()
+\EndProcedure
+\end{algorithmic}
+\normalsize
+\end{algorithm}
