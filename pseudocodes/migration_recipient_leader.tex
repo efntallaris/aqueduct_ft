@@ -6,32 +6,48 @@
   \State buffers $\leftarrow$ ALLOCATE\_BUFFERS($G_i$, metadata)
   \State REGISTER\_RDMA(buffers)
   \State STORE\_METADATA($G_i$, metadata, buffers)
-  \State SEND\_CONTROL(donor\_leader, PREPARE\_OK($G_i$))
+\State SEND\_RPC(donor\_leader, PREPARE\_OK($G_i$))
 \Statex \textbf{end upon}
 
 \Statex
 
 \Statex \textbf{upon} RECEIVE RDMA\_DONE($G_i$) \textbf{from} donor\_leader \textbf{do}
-  \Statex \textit{// Phase 1: Fast path replication}
-  \State acks $\leftarrow \emptyset$
-  \For{each replica $r$ in RECIPIENT\_GROUP}
-    \State SEND\_CONTROL($r$, REPLICA\_PREPARE($G_i$, buffers))
+  \Statex \textit{// Build replication chain}
+  \State alive\_replicas $\leftarrow [\,]$
+  \For{each replica $r$ in REPLICA\_SET($G_i$)}
+    \If{CHECK\_ALIVE($r$)}
+      \State alive\_replicas.append($r$)
+    \EndIf
   \EndFor
-  \While{$|\text{acks}| < \text{MAJORITY}$}
-    \State $r \leftarrow$ WAIT\_CONTROL(REPLICA\_ACK)
-    \State acks $\leftarrow$ acks $\cup \{r\}$
-  \EndWhile
-  
-  \Statex \textit{// Majority has the data}
-  \State RAFT\_APPEND\_LOG($G_i$\_MAJORITY\_READY)
+
+  \State chain $\leftarrow$ BUILD\_CHAIN(alive\_replicas)
+  \State STORE\_CHAIN($G_i$, chain)
+
+  \Statex \textit{// Fast-path chain replication}
+  \State acks $\leftarrow 0$
+  \For{each replica $r$ in chain}
+    \State ASYNC\_REPLICATE\_TO($r$, $G_i$)
+    \State WAIT\_ACK($r$)
+    \State acks $\leftarrow$ acks + 1
+    \If{acks $\geq$ MAJORITY}
+      \State \textbf{break}
+    \EndIf
+  \EndFor
+
+  \Statex \textit{// Commit after majority durability}
+  \State RAFT\_APPEND\_LOG($G_i$\_DATA\_READY)
   \State RAFT\_COMMIT()
-  \State ENABLE\_READS\_FROM\_RECIPIENT($G_i$)
-  \State SEND\_CONTROL(donor\_leader, MAJORITY\_REPLICATED($G_i$))
-  
-  \Statex \textit{// Phase 2: Slow path (async)}
-  \For{each replica $r$ not in acks}
-    \State ASYNC\_SEND\_CONTROL($r$, REPLICA\_SYNC($G_i$))
-  \EndFor
+  \State MARK\_Gi\_MAJORITY\_READY($G_i$)
+
+  \Statex \textit{// Notify donor leader}
+\State SEND\_RPC(donor\_leader, MAJORITY\_REPLICATED($G_i$))
+
+  \Statex \textit{// Complete chain + slow replicas asynchronously}
+  \State ASYNC\_REPLICATE\_TO\_REST\_OF\_CHAIN($G_i$)
+  \State ASYNC\_REPLICATE\_TO\_NON\_CHAIN\_REPLICAS($G_i$)
+
+  \Statex \textit{// Activate serving path}
+  \State UPDATE\_INDEX($G_i$)
 \Statex \textbf{end upon}
 \end{algorithmic}
 \normalsize

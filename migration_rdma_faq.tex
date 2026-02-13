@@ -1,0 +1,42 @@
+Q: When is a group of slots G considered reliably transferred to a group of Raft replicas?
+
+A: When a majority of Raft replicas have successfully received the RDMA transfers for that group, and have recorded in their log the need to update their index with those keys before responding to a get(Key). At least one of these replicas will survive to carry G in the future and is guaranteed to remember to update index (as it has been committed into its log).
+
+A replica votes to accept an UPDATE\_INDEX(txn\_id, G) command only when it knows to have received the RDMA transfers for (txn\_id, G).
+
+Committing the UPDATE\_INDEX(txn\_id, G) command in a Raft majority that has received the RDMA buffers for G is needed to ensure that at least one replica that can be elected leader has received the RDMA buffers (and thus can further propagate them as part of replica-sync actions in the future).
+
+Invariant: A replica that has the UPDATE\_INDEX(txn\_id, G) command in their log, also has the RDMA buffers that come with it. If that log entry is also committed, a majority of replicas have the RDMA buffers and remember to execute update-index on them.
+
+Q: When does a leader know when to propose an update-index command?
+
+A: It must have received feedback through replicas (via replies to the periodic AppendEntries RPC) about whether they have received the RDMA buffers for (txnid, G) or not.
+
+Q: How does the chain replication protocol for RDMA transfers work?
+
+A: The leader proposes a chain (order of replicas) to be followed, and kick-starts RDMAs to the next replica, notifying it when done (RDONE). An RDONE is the trigger for the next node to do the same. Nodes respond about the status of RDMA buffers to AppendEntries.
+
+Q: When is it safe to stop double reads for a group?
+
+A: When the group has been reliably transferred to the recipient group. In that case, it is guaranteed that the recipient group will authoritatively serve G (each replica is guaranteed to have done update-index and all key updates committed, prior to serving a get(K)).
+
+Thus the leader of a recipient group can respond (txn\_id, G)-OK to a RDONE(txn\_id, G) RPC from the donor leader when it has committed update-index(txn\_id, G).
+
+Q: What happens to a minority that has not yet received the RDMA transfers for G, even though an UPDATE\_INDEX(txn\_id, G) command has been committed?
+
+A: They either receive it later as part of an ongoing chain of RDMAs or they receive it from the leader as part of a log-sync action (when executing AppendEntries and one of the entries is UPDATE\_INDEX(txn\_id, G)).
+
+Q: Why is it necessary for a leader replica to add a tombstone in their index when deleting a key K belonging to G, prior to executing an update-index operation for G?
+
+A: Imagine that a recipient leader L receives an update for key K, then a delete for K, and then it runs update-index bringing K into the index. If you do not leave a tombstone for K, an old version of K is going to be resurrected, breaking consistency.
+
+Q: Does a replica need to know that a migration transaction is happening?
+
+A: Yes, so that it can handle index updates differently (tombstones)! A txn\_start(G) command needs to be committed prior to executing operations for G.
+
+Each replica also needs to know certain information about the transfer (txn\_id, G, etc.). The chain of replicas to be followed could be an optimization - the leader may propose this to be the replicas that have responded positively to the txn\_start(txn\_id, G) command.
+
+% Indicative log:
+
+% | txn(G) | K=3 | X=5 | del K (tombstone) | upd\_idx(G) | K=3 | del(K) (no tombstone) | Y=2 | R=1 |
+

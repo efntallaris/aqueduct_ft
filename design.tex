@@ -60,14 +60,30 @@ Furthermore, communicating through fewer, larger memory regions (MRs) optimizes 
 RDMA-capable NICs (RNICs) can more efficiently manage memory resources when buffers are contiguous, allowing for more efficient use its memory management resources (e.g., consume fewer entries as data in \OurImplementation{} is better packed, or by coalescing entries when contiguous).
 Overall, \OurImplementation{}'s memory organization greatly enhances the efficiency of bulk slot transfers critical for rapid elasticity.
 
+\subsection{Applicability and design goals}
+\label{sec:applicability}
 
+% \OurImplementation{}'s fault-tolerant migration algorithm targets a broad class of distributed, shared-nothing in-memory key-value stores. 
+% These systems (i) partition the key space into logical units such as shards or slots, (ii) replicate each partition across a small replication group using a leader-based consensus protocol (e.g., Raft) with synchronous writes, and (iii) operate under a fail-stop failure model where nodes may crash and later rejoin. 
+% The algorithm assumes that replication groups can expose bulk regions of in-memory state for transfer (e.g., via RDMA or large TCP buffers), but it is otherwise agnostic to the particular KVS implementation; it can be applied to Redis-like systems, RAMCloud-style log-structured KVSs, and more generally to any replicated KVS that satisfies the above assumptions.
+
+% Built on top of this model, \OurImplementation{} is designed around three key principles that guide our migration protocol. 
+% First, \emph{rapid elasticity}: an RDMA-friendly, slot-aware memory allocator that preserves the logical affinity of key-value pairs within partitions enables near line-rate bulk transfers during migration. 
+% Second, \emph{smooth elasticity}: a hybrid migration protocol and adaptive throttling mechanism ensure that migration traffic does not cause noticeable throughput drops or latency spikes for client workloads. 
+% Third, \emph{incremental elasticity}: group-based, pipelined migration allows newly migrated slots to become usable at the recipient as soon as their transfer and index updates complete, instead of waiting for the entire migration transaction to finish. 
+% The fault-tolerant migration protocol described in the following sections instantiates these principles in a replicated KVS that uses Raft for consistency.
+
+
+\OurImplementation{}'s fault-tolerant migration algorithm targets in-memory key-value stores. 
+We assume that the KVS (i) partition the key space into logical units such as shards or slots, (ii) replicate each partition across a replication group using a leader-based replication protocol (e.g., Raft) with synchronous writes, and (iii) operate under a fail-stop failure model where nodes may crash and later rejoin. 
+
+Overall \OurImplementation{}'s fault-tolerant migration protocol described in the following sections assumes a replicated KVS that uses Raft for consistency.
 
 
 \subsection{Fault Model}
 \label{sec:fault-model}
 \OurImplementation{} operates under a \emph{fail-stop} failure model, in which nodes may crash and permanently stop executing.
 A failed node does not recover unless explicitly restarted and reintroduced into the system.
-We do not consider Byzantine failures.
 
 The system employs synchronous replication for write operations using the Raft consensus protocol.
 Data is organized into fixed-size replication groups, each consisting of a leader and a set of followers.
@@ -75,14 +91,14 @@ A write is considered committed only after it has been durably replicated to a m
 
 \OurImplementation{} assumes that at least one replica holding committed data remains alive in each replication group.
 Under this assumption, the system guarantees durability and consistency of committed updates.
-If all replicas in a replication group crash simultaneously, the data hosted by that group is permanently lost; tolerating such failures is outside the scope of this work.
+If all replicas in a replication group crash simultaneously, the data hosted by that group is permanently lost.
 
 Elasticity operations involve two replication groups. A \emph{donor} group that currently owns the data being migrated, and a \emph{recipient} group that will assume ownership.
 Migration proceeds concurrently with client requests.
 The migration protocol tolerates crashes according to the Raft failure model and guarantees that no committed data is lost as long as the above majority assumption holds.
 
 Failures during migration do not require restarting the entire operation.
-Progress is tracked using epochs that are durably recorded via Raft, allowing the protocol to resume from the last successfully committed epoch after a failure.
+Instead of rolling back a partially completed migration transaction, the protocol always makes forward progress: once a group participates in a migration, it will eventually be transferred to its recipient group, along with all other groups in the transaction.
 
 
 \subsection{Fault Tolerant Migration protocol}
@@ -131,7 +147,7 @@ This guarantees that no committed updates are lost.
 After all groups complete, a transaction is considered complete and can safely cleanup the transaction state. 
 
 
-\subsubsection{Migration Phases}
+\subsection{Migration Phases}
 \label{sec:migration-phases}
 
 The migration of a slot group $G_i$ proceeds in a sequence of phases coordinated by the leaders of the donor and recipient replication groups.
@@ -163,7 +179,7 @@ At this point, ownership of the slots in $G_i$ is transferred to the recipient g
 This design guarantees that, even in the presence of failures, at least one replica in the recipient group holds the complete migrated data.
 
 
-\subsubsection{Serving Client Requests During Migration}
+\subsection{Serving Client Requests During Migration}
 \label{sec:serving-during-migration}
 
 \OurImplementation{} is designed to migrate data without interrupting client-facing operations.

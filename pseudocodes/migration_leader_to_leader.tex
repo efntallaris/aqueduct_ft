@@ -5,19 +5,37 @@
 \Procedure{MIGRATE\_GROUP}{$G_i$, $L_r$}
   \State RAFT\_APPEND($G_i$\_START)
   \State RAFT\_COMMIT()
-  
+
+  \Statex \textit{// get the block addresses for the slots}
   \State $B_s \leftarrow$ ALLOCATOR.get\_blocks($G_i$.slots)
+
+  \Statex \textit{// flush the logged writes to the actual blocks}
+  \For{\textbf{each} slot \textbf{in} $G_i$.slots}
+    \State FLUSH\_LOG\_ENTRIES\_TO\_BLOCK(slot)
+  \EndFor
+
+  \Statex \textit{// register the RDMA memory regions}
   \State $M_s \leftarrow$ REGISTER\_RDMA($B_s$)
+
+  \Statex \textit{// send prepare RPC to recipient with buffer metadata}
   \State SEND($L_r$, PREPARE($G_i$, meta($M_s$)))
   \State $M_d \leftarrow$ WAIT($L_r$, PREPARE\_OK)
-  
-  \For{$(m_s, m_d)$ in ZIP($M_s$, $M_d$)}
+
+  \Statex \textit{// perform RDMA transfer}
+  \For{($m_s$, $m_d$) \textbf{in} ZIP($M_s$, $M_d$)}
     \State RDMA\_WRITE($m_s$.addr, $m_d$.addr, $m_s$.size, $m_d$.rkey)
   \EndFor
+
+  \Statex \textit{// wait for all RDMA writes to complete}
   \State WAIT\_RDMA($G_i$)
-  
+
+  \Statex \textit{// notify recipient that RDMA is done}
   \State SEND($L_r$, RDMA\_DONE($G_i$))
+
+  \Statex \textit{// wait for majority replication on recipient}
   \State WAIT($L_r$, MAJORITY\_REPLICATED($G_i$))
+
+  \Statex \textit{// mark migration group as done in Raft}
   \State RAFT\_APPEND($G_i$\_DONE)
   \State RAFT\_COMMIT()
 \EndProcedure

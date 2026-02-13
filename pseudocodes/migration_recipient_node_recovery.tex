@@ -1,0 +1,13 @@
+\begin{algorithm}[H]
+\footnotesize
+\caption{Recipient Node Recovery}
+\begin{algorithmic}[1]
+\Statex \textbf{upon} REPLICATION\_FAILURE($G_i$, $R_{i+1}$) \textbf{do}
+  \State MARK\_NODE\_FAILED($R_{i+1}$)
+  \State next $\leftarrow$ FIND\_NEXT\_ALIVE\_NODE($i+1$)
+  \State UPDATE\_CHAIN($G_i$, \textbf{replace} $R_{i+1}$ \textbf{with} next)
+  \State ASYNC\_REPLICATE\_TO(next, $G_i$)
+\Statex \textbf{end upon}
+\end{algorithmic}
+\normalsize
+\end{algorithm}
