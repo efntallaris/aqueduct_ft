@@ -33,7 +33,7 @@
   \State SEND($L_r$, RDMA\_DONE($G_i$))
 
   \Statex \textit{// wait for majority replication on recipient}
-  \State WAIT($L_r$, MAJORITY\_REPLICATED($G_i$))
+  \State WAIT($L_r$, G\_i\_DONE($G_i$))
 
   \Statex \textit{// mark migration group as done in Raft}
   \State RAFT\_APPEND($G_i$\_DONE)

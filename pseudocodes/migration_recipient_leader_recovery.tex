@@ -3,53 +3,29 @@
 \caption{Recipient Leader Recovery}
 \begin{algorithmic}[1]
 \Statex \textbf{upon} LEADER\_ELECTION\_COMPLETE \textbf{do}
-  \If{NOT (self.group\_type is RECIPIENT and self is LEADER)}
-    \State \textbf{return} \Comment{Only new recipient leader recovers}
-  \EndIf
-
-  \Statex \textit{// Check if there is any active migration txn}
-  \If{$\neg$ HAS\_ACTIVE\_MIGRATION\_TXN()}
+  \If{self.group\_type $\neq \texttt{RECIPIENT}$ \textbf{or} self $\neq \texttt{LEADER}$}
     \State \textbf{return}
   \EndIf
 
-  \Statex \textit{// Load local migration metadata}
-  \State prepared\_groups $\leftarrow$ GET\_Gi\_WITH\_STATE(PREPARED)
-  \State received\_groups $\leftarrow$ GET\_Gi\_WITH\_STATE(TRANSFERRED)
-  \State committed\_groups $\leftarrow$ RAFT\_QUERY\_Gi\_WITH\_STATE(MAJORITY\_REPLICATED)
+  \Statex \textit{// Groups for which this recipient has metadata or data but INDEX\_UPDATE not yet committed}
+  \State active\_groups $\leftarrow$ QUERY\_Gi\_WITH\_STATE(PREPARED) OR WITH\_STATE(TRANSFERRED)
 
-  \For{\textbf{each} $G_i$ \textbf{in} (prepared\_groups $\cup$ received\_groups)}
-
-    \If{$G_i \in$ committed\_groups}
-      \Statex \textit{// Already durable before failure}
-      \State MARK\_Gi\_MAJORITY\_READY($G_i$)
-      \State \textbf{continue}
+  \For{\textbf{each} $G_i$ \textbf{in} active\_groups}
+    \State WAIT\_UNTIL\_MAJORITY\_OF\_RDMA\_RECEIVED[Ri][Gi] = true
+    \If{RDMA\_RECEIVED[self][Gi] == false}
+      \State ASK\_THE\_DATA\_FROM\_DONOR
+      \State WAIT\_UNTIL\_RDMA\_DONE\_OF\_Gi
     \EndIf
 
-    \Statex \textit{// Check local buffer availability}
-    \If{$\neg$ HAS\_LOCAL\_BUFFERS($G_i$)}
-      \Statex \textit{// Buffers lost $\rightarrow$ must reprepare}
-      \State SEND\_RPC(donor\_leader, NEED\_REPREPARE($G_i$))
-      \State DISCARD\_LOCAL\_STATE($G_i$)
-      \State \textbf{continue}
-    \EndIf
-
-    \Statex \textit{// Determine transfer state}
-    \If{$G_i \in$ received\_groups}
-      \Statex \textit{// RDMA completed before failure}
-      \State RESUME\_CHAIN\_REPLICATION($G_i$)
-
-    \ElsIf{$G_i \in$ prepared\_groups}
-      \Statex \textit{// Prepared but no data received}
-      \State SEND\_RPC(donor\_leader, NEED\_RETRANSFER($G_i$))
-
-    \Else
-      \Statex \textit{// Unknown state $\rightarrow$ ask donor}
-      \State SEND\_RPC(donor\_leader, QUERY\_Gi\_STATUS($G_i$))
-    \EndIf
+    \State RAFT\_APPEND(\texttt{INDEX\_UPDATE}($G_i$))
+    \State RAFT\_COMMIT()
+    \State APPLY\_UPDATE\_INDEX($G_i$)
 
   \EndFor
-
   \Statex \textbf{end upon}
+
+  \Statex
+
 \end{algorithmic}
 \normalsize
 \end{algorithm}

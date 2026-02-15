@@ -28,19 +28,20 @@
     \State SEND\_RPC(recipient\_leader, QUERY\_Gi\_STATE($G_i$))
     \State state $\leftarrow$ WAIT\_REPLY(recipient\_leader)
 
-    \If{state $=$ MAJORITY\_REPLICATED}
+    \If{state $=$ Gi\_Done}
       \Statex \textit{// Recipient has quorum durability $\rightarrow$ finalize locally}
       \State RAFT\_APPEND\_LOG(Gi\_DONE)
       \State RAFT\_COMMIT()
-      \State MARK\_GROUP\_COMPLETE($G_i$)
 
     \ElsIf{state $=$ TRANSFERRED}
       \Statex \textit{// RDMA completed, replication still ongoing}
-      \State CONTINUE\_WAITING($G_i$)
+      % \State CONTINUE\_WAITING($G_i$)
+      \State WAIT\_FOR\_Gi\_DONE($G_i$)
 
     \ElsIf{state $=$ PREPARED}
       \Statex \textit{// Buffers exist but no data $\rightarrow$ re-issue RDMA WRITEs}
-      \State RESUME\_RDMA\_TRANSFER($G_i$)
+      \State START\_RDMA\_TRANSFER($G_i$)
+      \State WAIT\_FOR\_COMPLETION($G_i$)
 
     \Else
       \Statex \textit{// Unknown or transient state $\rightarrow$ skip and revisit later}
