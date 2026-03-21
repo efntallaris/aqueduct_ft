@@ -1,62 +1,62 @@
-\begin{algorithm}[H]
-\footnotesize
+\begin{algorithm}[t]
+\small
 \caption{Donor Leader Recovery}
+\label{alg:donor-recovery}
 \begin{algorithmic}[1]
-\Statex \textbf{upon} LEADER\_ELECTION\_COMPLETE \textbf{do}
-  \If{NOT (self.group\_type is DONOR and self is LEADER)}
-    \State \textbf{return} \Comment{Only new donor leader recovers}
-  \EndIf
 
-  \Statex \textit{// Check if there is any active migration txn}
-  \If{$\neg$ HAS\_ACTIVE\_MIGRATION\_TXN()}
+\Upon{\msg{leader\_election\_complete}}
+  \If{\textbf{not} (self.group\_type is DONOR \textbf{and} self is LEADER)}
     \State \textbf{return}
   \EndIf
 
-  \Statex \textit{// Load migration progress from Raft}
-  \State started\_groups $\leftarrow$ RAFT\_QUERY\_Gi\_WITH\_STATE(STARTED)
-  \State done\_groups $\leftarrow$ RAFT\_QUERY\_Gi\_WITH\_STATE(DONE)
+  \If{$\neg$ \fn{Has\_Active\_Migration\_Txn}()}
+    \State \textbf{return}
+  \EndIf
 
-  \For{each $G_i$ in started\_groups}
+  \phasesep{Load migration progress from Raft}
+
+  \State started\_groups $\leftarrow$ \fn{Raft\_Query\_Gi\_With\_State}(\msg{started})
+  \State done\_groups $\leftarrow$ \fn{Raft\_Query\_Gi\_With\_State}(\msg{done})
+
+  \For{\textbf{each} $G_i$ \textbf{in} started\_groups}
 
     \If{$G_i \in$ done\_groups}
-      \Statex \textit{// Already safely completed before failure}
-      \State MARK\_GROUP\_COMPLETE($G_i$)
+      \State \fn{Mark\_Group\_Complete}($G_i$) \Comment{completed before failure}
       \State \textbf{continue}
     \EndIf
 
-    \Statex \textit{// Query recipient leader for current $G_i$ state}
-    \State SEND\_RPC(recipient\_leader, QUERY\_Gi\_STATE($G_i$))
-    \State state $\leftarrow$ WAIT\_REPLY(recipient\_leader)
+    \phasesep{Query recipient for $G_i$ state}
 
-    \If{state $=$ Gi\_Done}
-      \Statex \textit{// Recipient has quorum durability $\rightarrow$ finalize locally}
-      \State RAFT\_APPEND\_LOG(Gi\_DONE)
-      \State RAFT\_COMMIT()
+    \State \fn{Send\_RPC}(recipient\_leader, \msg{query\_gi\_state}($G_i$))
+    \State state $\leftarrow$ \fn{Wait\_Reply}(recipient\_leader)
 
-    \ElsIf{state $=$ TRANSFERRED}
-      \Statex \textit{// RDMA completed, replication still ongoing}
-      % \State CONTINUE\_WAITING($G_i$)
-      \State WAIT\_FOR\_Gi\_DONE($G_i$)
+    \Statex
 
-    \ElsIf{state $=$ PREPARED}
-      \Statex \textit{// Buffers exist but no data $\rightarrow$ re-issue RDMA WRITEs}
-      \State START\_RDMA\_TRANSFER($G_i$)
-      \State WAIT\_FOR\_COMPLETION($G_i$)
+    \If{state $=$ \msg{gi\_done}}
+      \State \fn{Raft\_Append\_Log}(\msg{gi\_done}) \Comment{finalize locally}
+      \State \fn{Raft\_Commit}()
+
+    \ElsIf{state $=$ \msg{transferred}}
+      \State \fn{Wait\_For\_Gi\_Done}($G_i$) \Comment{replication ongoing}
+
+    \ElsIf{state $=$ \msg{prepared}}
+      \State \fn{Start\_RDMA\_Transfer}($G_i$) \Comment{re-issue RDMA writes}
+      \State \fn{Wait\_For\_Completion}($G_i$)
 
     \Else
-      \Statex \textit{// Unknown or transient state $\rightarrow$ skip and revisit later}
-      \State DEFER\_Gi($G_i$)
+      \State \fn{Defer\_Gi}($G_i$) \Comment{revisit later}
     \EndIf
 
   \EndFor
 
-  \Statex \textit{// Global txn completion check}
-  \If{ALL\_GROUPS\_DONE()}
-    \State RAFT\_APPEND\_LOG(TXN\_MIGRATION\_DONE)
-    \State RAFT\_COMMIT()
+  \phasesep{Global transaction completion}
+
+  \If{\fn{All\_Groups\_Done}()}
+    \State \fn{Raft\_Append\_Log}(\msg{txn\_migration\_done})
+    \State \fn{Raft\_Commit}()
   \EndIf
 
-  \Statex \textbf{end upon}
+\EndUpon
+
 \end{algorithmic}
-\normalsize
 \end{algorithm}

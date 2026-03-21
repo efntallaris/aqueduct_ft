@@ -3,62 +3,32 @@
 \section{Achieving efficient elasticity}
 \label{sec:design}
 
-\subsection{In-memory data organization}
+\subsection{In-memory data organization to enable fast data transfers}
 \label{sec:data_organization}
 
-This section presents the design and implementation of the mechanisms that enable efficient and minimally disruptive elasticity in \OurImplementation{}. 
-We first describe the in-memory data organization, focusing on how \OurImplementation{}'s RDMA-friendly memory allocator ensures that logical data groupings (slots) are reflected in the physical memory layout, 
-enabling efficient high-speed data transfers (Section~\ref{sec:data_organization}). We then detail the migration protocol,
-outlining how \OurImplementation{} orchestrates seamless and transparent data migrations across nodes while continuing to serve client requests (Section~\ref{sec:migration-protocol}). 
-A key part of the migration process is the index update, which integrates transferred key-value pairs into the destination’s serving data structures (Section~\ref{sec:index_updating}).
-
-Building upon this foundation, we improve upon the base migration protocol by overlapping computation and communication for better resource utilization (Section \ref{sec:groups-stages}). 
-Finally we introduce a self-regulating mechanism that allows \OurImplementation{} to preserve client workload performance even during intensive migration phases (Section \ref{sec:throttling}).
-
-\begin{figure}
+\begin{figure}[t]
 	\centering
-	\includegraphics[width=0.8\columnwidth]{figs/allocator/allocator_data_organization.pdf}
-	\caption{Allocator internal data organization}
-	\label{fig:allocator_organization}
-\end{figure}
-
-\begin{figure*}[t]
-	\centering
-	\includegraphics[width=0.9\textwidth]{figs/1.pdf}
+	\includegraphics[width=\columnwidth]{figs/1.pdf}
 	\caption{\OurImplementation{} baseline migration protocol}
 	\label{fig:migration_flow}
-\end{figure*}
+\end{figure}
 
-Key-value stores (KVSs) typically organize data in logical partitions called {\em shards}, {\em slots}, or {\em tokens} in different systems~\cite{mongodb,redis-pure,cassandra-paper}. 
+
+
+Key-value stores (KVSs) typically organize data in logical partitions called {\em shards}, {\em slots}, or {\em tokens} in different systems~\cite{mongodb,redis-pure,cassandra-paper}.
+This in-memory data organization does not necessarily align with the logical organization of data (i.e., slots), leading to data of the same slot being scattered across different memory locations.
 In this paper, we uniformly refer to them as \emph{slots}, regardless of the underlying system.
 
-In most KVSs today, in-memory data organization does not necessarily align with the logical organization of data (i.e., slots).
-The reason is that general-purpose memory allocators typically disregard the logical affinity between KV pairs, leading to data of the same slot being scattered across different memory locations within a node. Consequently, during data migrations, a node must gather scattered memory buffers to transfer a slot, resulting in long \emph{gather} lists for RDMA operations. 
-Such long RDMA chains of small buffers are inefficient, severely degrading transfer bandwidth and efficiency.
-
-To address this, \OurImplementation{} introduces a bulk-transfer-oriented, RDMA-friendly memory allocator that ensures in-memory layouts mirror the logical slot structure.
-Upon a memory allocation request, \OurImplementation{}’s allocator, leveraging the knowledge of which slot ID each key-value pair belongs to, aims to place all data of a slot into contiguous physical memory regions. 
-
-The allocator maintains metadata in the form of a hash table, where each bucket represents a distinct slot (Fig.~\ref{fig:allocator_organization}).
-Since it is challenging to predict all records and their memory requirements for each slot without prior knowledge of the dataset, the allocator operates using fixed-size memory regions called \emph{blocks}.
-Records within a slot are packed across one or more blocks. When a block becomes full, a new one is allocated to continue storing the slot's data.
-Each block includes metadata \emph{prologue} and \emph{epilogue} to efficiently keep track of the block boundaries as well as the used and free segments in it.
-
-We replace the generic memory allocation policy with our tailored allocator.
+To address this, \OurImplementation{} features a memory allocator that ensures in-memory layouts mirror the logical slot structure, aiming for bulk-transfer-oriented (RDMA-friendly) network transfers.
+Its unique characteristic is that it maps key-value pairs belonging to the same slot to contiguous fixed-size physical memory regions ({\em blocks}).
+Records in the same slot are packed across one or more blocks. When a block becomes full, a new one is allocated to continue storing the slot’s data.
 Each memory allocation request is tagged with its associated slot, allowing the allocator to co-locate key-value pairs belonging to the same slot.
 
-The allocator is a full-featured memory manager that supports all standard operations, including inserts, deletes, and updates.
-To efficiently manage memory reuse, it employs a free list to track available memory regions, enabling fast identification of suitable space for new allocations.
-Additionally, it supports coalescing adjacent free regions to reduce fragmentation and improve overall space utilization.
-
-For every inserted record, the allocator adds a metadata header that records the segment boundaries and includes padding to ensure proper alignment to double word (8 bytes) boundaries.
-This allows to use the least significant bits of the memory address (that we assume it is zero due to alignment) to encode addition metadata (e.g. the status of the segment).
-
-During the migration process, when a node offloads certain slots to another node, it can request a list of memory blocks associated with those slots.
-This slot-aware memory organization substantially reduces the number of descriptors in RDMA operations (i.e., shorter gather lists composed of larger buffers), leading to significantly improved RDMA performance.
+During the migration process, when a node offloads certain slots to another node, it requests a list of memory blocks associated with those slots, each block to be transferred in a separate RDMA operation descriptor.
+This slot-aware memory organization substantially reduces the number of such descriptors (i.e., shorter gather lists composed of larger buffers), leading to significantly improved RDMA performance.
 Furthermore, communicating through fewer, larger memory regions (MRs) optimizes memory \emph{registration} overhead\footnote{RDMA operations require that memory regions (MRs) be {\em registered} with RNICs, assigning them Remote Keys (RKeys) used in remote access}.
-RDMA-capable NICs (RNICs) can more efficiently manage memory resources when buffers are contiguous, allowing for more efficient use its memory management resources (e.g., consume fewer entries as data in \OurImplementation{} is better packed, or by coalescing entries when contiguous).
-Overall, \OurImplementation{}'s memory organization greatly enhances the efficiency of bulk slot transfers critical for rapid elasticity.
+RNICs may also more efficiently manage memory resources when buffers are contiguous, allowing for more efficient use of their memory management resources.
+
 
 \subsection{Applicability and design goals}
 \label{sec:applicability}
@@ -75,104 +45,133 @@ Overall, \OurImplementation{}'s memory organization greatly enhances the efficie
 
 
 \OurImplementation{}'s fault-tolerant migration algorithm targets in-memory key-value stores. 
-We assume that the KVS (i) partition the key space into logical units such as shards or slots, (ii) replicate each partition across a replication group using a leader-based replication protocol (e.g., Raft) with synchronous writes, and (iii) operate under a fail-stop failure model where nodes may crash and later rejoin. 
+We assume that the KVS (i) partition the key space into logical units such as shards or slots, (ii) replicate each partition across a replication group using a leader-based replication protocol (e.g., Raft) with synchronous writes, and (iii) operate under a crash-recovery failure model where nodes may crash and later rejoin using persisted state. 
 
 Overall \OurImplementation{}'s fault-tolerant migration protocol described in the following sections assumes a replicated KVS that uses Raft for consistency.
 
 
 \subsection{Fault Model}
 \label{sec:fault-model}
-\OurImplementation{} operates under a \emph{fail-stop} failure model, in which nodes may crash and permanently stop executing.
-A failed node does not recover unless explicitly restarted and reintroduced into the system.
+\OurImplementation{} operates under a \emph{crash-recovery} failure model.
+Nodes may crash at any point and later restart, recovering their state from the persisted Raft log and catching up with the rest of the group through standard Raft mechanisms.
 
 The system employs synchronous replication for write operations using the Raft consensus protocol.
 Data is organized into fixed-size replication groups, each consisting of a leader and a set of followers.
 A write is considered committed only after it has been durably replicated to a majority of the nodes in its replication group.
 
-\OurImplementation{} assumes that at least one replica holding committed data remains alive in each replication group.
+\OurImplementation{} assumes that a majority of replicas holding committed data remain available in each replication group.
 Under this assumption, the system guarantees durability and consistency of committed updates.
-If all replicas in a replication group crash simultaneously, the data hosted by that group is permanently lost.
+If a majority of replicas in a replication group are simultaneously unavailable, the group stalls until sufficiently many nodes recover.
 
-Elasticity operations involve two replication groups. A \emph{donor} group that currently owns the data being migrated, and a \emph{recipient} group that will assume ownership.
+Elasticity operations contain two replication groups. A \emph{donor} group that currently owns the data being migrated, and a \emph{recipient} group that will assume ownership.
 Migration proceeds concurrently with client requests.
 The migration protocol tolerates crashes according to the Raft failure model and guarantees that no committed data is lost as long as the above majority assumption holds.
 
-Failures during migration do not require restarting the entire operation.
-Instead of rolling back a partially completed migration transaction, the protocol always makes forward progress: once a group participates in a migration, it will eventually be transferred to its recipient group, along with all other groups in the transaction.
+In case of a crash, instead of rolling back a partially completed migration transaction, the protocol always moves forward. Once a group participates in a migration it will eventually be transferred to its recipient group, along with all other groups in the transaction.
+A node that recovers mid-migration replays its Raft log to reconstruct progress. If a recipient replica recovers and does not have the migrated data, it requests it from the recipient leader or, if unavailable, from the donor replica group.
 
 
-\subsection{Fault Tolerant Migration protocol}
+\subsection{Fault Tolerant Migration protocol overview}
 \label{sec:migration-protocol}
 
-The migration protocol is designed to operate concurrently with client requests and relies on Raft for coordination of source and reciepient, 
+The migration protocol is designed to operate concurrently with client requests and relies on Raft for coordination of source and reciepient,
 and one-sided RDMA for efficient bulk data transfer.
-Data migrations in \OurImplementation{} are managed by the \emph{Migration Manager (MM)} module, which orchestrates the entire migration process on the source and destination nodes. 
-The MM ensures seamless data transfer and coordinates the ownership handover upon successful migration. 
-The migration process involves both the transfers of data and its integration into the destination node’s active dataset. 
+Data migrations in \OurImplementation{} are managed by the \emph{Migration Manager (MM)} module, which orchestrates the entire migration process on the source and destination nodes.
+The MM ensures seamless data transfer and coordinates the ownership handover upon successful migration.
+The migration process involves both the transfers of data and its integration into the destination node’s active dataset.
 
 During migration, there are two replica groups involved.
-the \emph{donor} (source) group, which holds the data to be migrated, and the \emph{recipient} (destination) group, 
+the \emph{donor} (source) group, which holds the data to be migrated, and the \emph{recipient} (destination) group,
 which will receive and integrate the migrated data. Each group has a leader and followers. The leader coordinates the migration process within its group.
 
-At first, the protocol should transfer the data from the source to the destination (leader-to-leader) and ensure the migrating data can tolerate crashes before stoping the double reads. 
-Before stopping the double reads and disconnecting the source replica group for that group, the destination replica group should transfer the data to a majority of replicas (leader-to-replica) 
-and integrate the received data into leader recipient recplica's active dataset via index updates (Section~\ref{sec:index_updating}). 
-Leader-to-replica on the destination replica group, have two paths. The fast path which the majority of the replicas have received the migrating data. This path must finish before stopping the double reads to ensure that the data is available on a majority of replicas. 
-The slow path which the minority of the replicas have not received the data. This can happen asynchronously and can complete after stopping the double reads. 
+At first, the protocol should transfer the data from the source to the destination (leader-to-leader) and ensure the migrating data can tolerate crashes before stoping the double reads.
+Before stopping the double reads and disconnecting the source replica group for that group, the destination replica group should transfer the data to a majority of replicas (leader-to-replica)
+and integrate the received data into leader recipient recplica’s active dataset via index updates (Section~\ref{sec:index_updating}).
+Leader-to-replica on the destination replica group, have two paths. The fast path which the majority of the replicas have received the migrating data. This path must finish before stopping the double reads to ensure that the data is available on a majority of replicas.
+The slow path which the minority of the replicas have not received the data. This can happen asynchronously and can complete after stopping the double reads.
 At some point all nodes will eventually receive the migrated data from either the fast path or the slow path.
 % Then, the destination integrates the received data into its active dataset via index updates (Section~\ref{sec:index_updating}).
-Fig.~\ref{fig:migration_flow} provides an overview of \OurImplementation{}’s migration process. 
+Fig.~\ref{fig:migration_flow} provides an overview of \OurImplementation{}’s migration process.
 Migration is initiated by a coordinator $C$, which instructs target source replica leader to start a transaction and migrate a set of slots to a destination replica leader $D$.
-The protocol proceeds in subtransactions ($G_i$), each corresponding to a subset of the total slots. 
-For each $G_i$, source replica group records the start of $G_i$.
-For each group, the source first enters a prepare phase, during which it establishes RDMA buffers and exposes memory regions containing the data to be migrated. 
-Buffer metadata, including RDMA pointers and access keys, are disseminated to the destination group via a reliable control path.
-
-
-Once preparation completes, 
-the source leader performs one-sided RDMA WRITE operations to write data directly from the source leader replica to the destination side replica leader. 
-Upon a transfer completion of a group $G_i$, the source leader issues an RDMA\_DONE acknowledgment.
-
-
-To ensure correctness under failures, the protocol requires a majority acknowledgment within the destination replication group before marking a batch as successfully transferred. 
-Since the majority of replicas in the destination group must confirm that received the data, the protocol guarantees that at least one replica will have the complete data even in the event of failures, therefore clients can safely ask and proceed to the next group.
-% The migration loop continues until all data associated with the current epoch has been transferred and acknowledged. 
-At this point, the group is marked as completed (Gi Done) and committed via Raft on source replication group.
-
-During migration of a group, writes are directed to the destination replica group, while reads may be served from either the source or destination group, depending on the migration state of the accessed data.
-This guarantees that no committed updates are lost. 
-
-
-
-After all groups complete, a transaction is considered complete and can safely cleanup the transaction state. 
-
+The protocol proceeds in subtransactions ($G_i$), each corresponding to a subset of the total slots.
+The following sections describe each phase of the protocol in detail, organized by the communication pattern: intra-donor operations (Section~\ref{sec:intra-donor}), leader-to-leader transfer (Section~\ref{sec:leader-to-leader}), and intra-recipient operations (Section~\ref{sec:intra-recipient}).
+After all groups complete, a transaction is considered complete and can safely cleanup the transaction state.
 
 \subsection{Migration Phases}
 \label{sec:migration-phases}
 
-The migration of a slot group $G_i$ proceeds in a sequence of phases coordinated by the leaders of the donor and recipient replication groups.
-These phases are designed to enable fast data transfers while preserving correctness under failures.
+\subsubsection{Intra-donor operations}
+\label{sec:intra-donor}
 
-\textbf{\noindent{Prepare phase}}
+The migration of a slot group $G_i$ begins with the donor replication group preparing the data for transfer.
 The migration manager on the donor leader initiates the migration of group $G_i$ by entering a prepare phase.
 During this phase, the donor leader identifies the memory blocks associated with the slots in $G_i$ and exposes them as RDMA-accessible memory regions.
 The donor disseminates the corresponding buffer metadata, including memory addresses, sizes, and RDMA access keys, to the recipient group through a reliable control path.
 This phase establishes all necessary state for bulk data transfer without moving any data.
 
-\textbf{\noindent{Bulk transfer phase}}
+Before starting the transfer, the donor leader appends a \texttt{$G_i$\_START} entry to the Raft log and commits it, making the migration intent durable.
+After the recipient confirms that $G_i$ has been fully replicated (Section~\ref{sec:intra-recipient}), the donor appends and commits a \texttt{$G_i$\_DONE} entry, marking the group as complete.
+These two entries allow a recovering donor leader to determine which groups are in-flight and which have finished (Algorithm~\ref{alg:donor-recovery}).
+
+\newtext{On the recipient side, a \texttt{txn\_start($G_i$)} entry must be committed in its Raft log before processing any client operations for the migrating group.
+This is necessary so that replicas know to maintain tombstones for deleted keys, which would otherwise be resurrected during index updates (Section~\ref{sec:index_updating}).}
+
+\subsubsection{Leader-to-leader transfer}
+\label{sec:leader-to-leader}
+
 Once preparation completes, the donor leader performs one-sided RDMA \texttt{WRITE} operations to transfer the data of group $G_i$ directly into pre-allocated memory on the recipient leader.
 Data movement occurs entirely off the CPU fast path and does not require involvement of the recipient leader during transfer.
 After all RDMA operations for $G_i$ complete, the donor leader issues an explicit \texttt{RDMA\_DONE} notification to the recipient group.
 
-\textbf{\noindent{Replication on the recipient}}
+\subsubsection{Intra-recipient operations}
+\label{sec:intra-recipient}
+
 Upon receiving the transferred data, the recipient leader propagates the migrated state to the replicas in its replication group.
+\newtext{Data is propagated to the replicas using a chain replication protocol over RDMA.
+The leader picks an ordering of replicas and writes to the first one; when that replica finishes, it signals \texttt{RDMA\_DONE} to the next, and so on down the chain.
+Each replica piggybacks the status of its received buffers onto its \texttt{AppendEntries} responses back to the leader.}
+
+\paragraph{Fast and slow replication paths.}
 This replication follows two paths.
 In the \emph{fast path}, the recipient leader synchronously ensures that the migrated data is durably replicated to a majority of replicas.
 This step is required before the system can safely stop serving reads from the donor group.
 In the \emph{slow path}, the remaining replicas receive the migrated data asynchronously after the group is made available for serving.
+\newtext{Replicas in the slow path either receive the data as part of the ongoing replication chain or obtain it from the leader as part of a log-sync action, when executing \texttt{AppendEntries} that include an \texttt{INDEX\_UPDATE} entry.}
 Eventually, all replicas converge to the same state.
 
-\textbf{\noindent{Commit and group completion}}
+\subsubsection{Index updating}
+\label{sec:index_updating}
+
+Transferring data using RDMA enables the source node to write data directly into the target node's memory.
+However, transferring raw data alone is insufficient.
+In \OurImplementation{}, a dictionary-like data structure serves as an index, maintaining pointers to the actual key-value pairs.
+Therefore, after the data transfer completes, the dictionary is updated to reflect the new memory locations—a process referred to as the \emph{index update}.
+
+\OurImplementation{} handles index updates using dedicated background threads with lower scheduling priority to minimize interference with client-serving operations.
+Since these background threads run concurrently with client threads, multiple threads may access and update the dictionary simultaneously.
+To ensure consistency, \OurImplementation{} employs fine-grained locking for dictionary access and modification.
+
+\paragraph{Stale entry detection.}
+During migration, all new writes are directed to the destination node. Consequently, data received from the source may contain stale versions of keys. As part of the index update, \OurImplementation{} detects and discards these stale entries,
+ensuring that only the most recent values are preserved in the dictionary.
+
+\paragraph{Tombstones for deleted keys.}
+\newtext{Recipient replicas must keep tombstones for deleted keys while a migration transaction is active.
+Consider a key $K$ that is first updated and then deleted at the recipient before the index update runs.
+Without a tombstone, the index update would blindly insert the older version of $K$ from the donor, effectively resurrecting a deleted key.
+The tombstone lets the index update skip $K$.
+Once the index update for $G_i$ finishes, its tombstones can be garbage-collected.}
+
+\paragraph{INDEX\_UPDATE proposal.}
+\newtext{Once a majority of replicas have confirmed receipt of the RDMA buffers for $(txn\_id, G_i)$ through their \texttt{AppendEntries} responses, 
+the recipient leader first executes the index update locally and then proposes the \texttt{INDEX\_UPDATE($G_i$)} command via Raft.
+A replica will only accept this command if it already holds the corresponding buffers.
+If a replica has \texttt{INDEX\_UPDATE($G_i$)} in its log, it also has the data.
+So once this entry is committed, a majority hold both the data and the log entry, and any leader elected from that majority can serve the migrated data.}
+
+\subsubsection{Commit and group completion}
+\label{sec:commit-completion}
+
 After a majority of the recipient replicas acknowledge successful replication of group $G_i$, the migration of the group is considered complete.
 The donor leader records the completion of $G_i$ as a committed event via Raft, making the progress durable.
 At this point, ownership of the slots in $G_i$ is transferred to the recipient group, and the system proceeds to the next migration group.
@@ -198,9 +197,11 @@ Read requests targeting slots in $G_i$ may be served by either the donor or the 
 Before the completion of the fast replication path on the recipient side, reads may be served from the donor group to avoid exposing incomplete state.
 After a majority of recipient replicas have received the migrated data, reads are served exclusively by the recipient group.
 This controlled transition ensures that reads never observe partially migrated or unreplicated state.
+\newtext{Double reads for $G_i$ can stop once the recipient leader has committed \texttt{INDEX\_UPDATE($G_i$)} via Raft.
+After that, any replica that could become leader already has the data and the index update in its log, so the recipient group can serve $G_i$ on its own.}
 
-By redirecting writes to the recipient group and carefully transitioning read ownership only after majority replication, \OurImplementation{} guarantees that no committed updates are lost and that clients observe a consistent view of the data.
-At any point during migration, each key is served by at least one replica group that contains a complete and up-to-date version of the data.
+Since writes go to the recipient from the start and reads switch over only after a majority has the data, no committed update is lost and clients always see a consistent state.
+Throughout the migration, every key is served by at least one group that holds its latest version.
 
 
 % The migration process goes through the pre-migration and the data transfer phases.
@@ -230,21 +231,6 @@ At any point during migration, each key is served by at least one replica group 
 % Adopting read/write handling similar to Fulva, we inherit the benefits of a hybrid (source-driven and destination-driven) approaches via cooperative processing between the source and the destination nodes guarantees linearizability and zero downtime during data migration. Beyond Fulva, \OurImplementation{} achieves near–link-speed migration while imposing minimal overhead on foreground workloads (not currently possible with competitive migration approaches) with minimal impact on client workloads, as described next.
 
 
-\subsection{Index updating}
-\label{sec:index_updating}
-
-
-Transferring data using RDMA enables the source node to write data directly into the target node’s memory.
-However, transferring raw data alone is insufficient. 
-In \OurImplementation{}, a dictionary-like data structure serves as an index, maintaining pointers to the actual key-value pairs. 
-Therefore, after the data transfer completes, the dictionary is updated to reflect the new memory locations—a process referred to as the \emph{index update}.
-
-\OurImplementation{} handles index updates using dedicated background threads with lower scheduling priority to minimize interference with client-serving operations. 
-Since these background threads run concurrently with client threads, multiple threads may access and update the dictionary simultaneously.
-To ensure consistency, \OurImplementation{} employs fine-grained locking for dictionary access and modification.
-
-During migration, all new writes are directed to the destination node. Consequently, data received from the source may contain stale versions of keys. As part of the index update, \OurImplementation{} detects and discards these stale entries, 
-ensuring that only the most recent values are preserved in the dictionary.
 
 
 

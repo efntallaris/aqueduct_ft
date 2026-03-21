@@ -13,6 +13,16 @@
 \usepackage{algorithm}
 \usepackage{algpseudocode} % from algorithmicx
 
+% --- New text marker ---
+\newcommand{\newtext}[1]{{\color{blue}#1}}
+
+% --- Pseudocode visual helpers ---
+\newcommand{\phasesep}[1]{\Statex {\color{gray}\hrulefill\;\textit{\small #1}\;\hrulefill}}
+\newcommand{\msg}[1]{\textsc{#1}}
+\newcommand{\fn}[1]{\textnormal{\textsc{#1}}}
+\algnewcommand{\Upon}[1]{\Statex \textbf{upon} #1 \textbf{do}}
+\algnewcommand{\EndUpon}{\Statex \textbf{end upon}}
+
 \def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em
     T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
 \begin{document}

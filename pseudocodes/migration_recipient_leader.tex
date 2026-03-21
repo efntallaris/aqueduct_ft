@@ -1,57 +1,52 @@
-\begin{algorithm}[H]
-\footnotesize
-\caption{Recipient Leader Handling of Migrated Data}
+\begin{algorithm}[t]
+\small
+\caption{Recipient Leader -- Handling Migrated Data}
+\label{alg:recipient-leader}
 \begin{algorithmic}[1]
-\Statex \textbf{upon} RECEIVE PREPARE($G_i$, metadata) \textbf{from} donor\_leader \textbf{do}
-  \State buffers $\leftarrow$ ALLOCATE\_BUFFERS($G_i$, metadata)
-  \State REGISTER\_RDMA(buffers)
-  \State STORE\_METADATA($G_i$, metadata, buffers)
-\State SEND\_RPC(donor\_leader, PREPARE\_OK($G_i$))
-\Statex \textbf{end upon}
+
+\Upon{\fn{Receive} \msg{prepare}($G_i$, metadata) \textbf{from} donor\_leader}
+  \State buffers $\leftarrow$ \fn{Allocate\_Buffers}($G_i$, metadata)
+  \State \fn{Register\_RDMA}(buffers)
+  \State \fn{Store\_Metadata}($G_i$, metadata, buffers)
+  \State \fn{Send\_RPC}(donor\_leader, \msg{prepare\_ok}($G_i$))
+\EndUpon
 
 \Statex
 
-\Statex \textbf{upon} RECEIVE RDMA\_DONE($G_i$) \textbf{from} donor\_leader \textbf{do}
+\Upon{\fn{Receive} \msg{rdma\_done}($G_i$) \textbf{from} donor\_leader}
+
+  \phasesep{Intra-recipient: replication}
+
   \State $\texttt{RDMA\_RECEIVED}[\texttt{self}][G_i] \leftarrow \texttt{true}$
-  \Statex \textit{// Build replication chain}
   \State alive\_replicas $\leftarrow [\,]$
-  \For{each replica $r$ in REPLICA\_SET($G_i$)}
-    \If{CHECK\_ALIVE($r$)}
+  \For{\textbf{each} replica $r$ \textbf{in} \fn{Replica\_Set}($G_i$)}
+    \If{\fn{Check\_Alive}($r$)}
       \State alive\_replicas.append($r$)
     \EndIf
   \EndFor
+  \State chain $\leftarrow$ \fn{Build\_Chain}(alive\_replicas)
+  \State \fn{Replicate\_To}($r$, $G_i$)
 
-  \State chain $\leftarrow$ BUILD\_CHAIN(alive\_replicas)
+  \phasesep{Majority wait \& index update}
 
-  \State REPLICATE\_TO($r$, $G_i$)
+  \State \textbf{wait until} majority of $\texttt{RDMA\_RECEIVED}[R_i][G_i] = \texttt{true}$
+  \State \fn{Raft\_Append\_Log}($G_i$\_INDEX\_UPDATE)
+  \State \fn{Raft\_Commit}()
+  \State \fn{Execute\_Update\_Index}($G_i$)
 
-  
-  \State WAIT UNTIL MAJORITY OF ($\texttt{RDMA\_RECEIVED}[R_i][G_i] = \texttt{true}$)
-  \State RAFT\_APPEND\_LOG($G_i$\_INDEX\_UPDATE)
-  \State RAFT\_COMMIT()
-  \State EXECUTE\_UPDATE\_INDEX($G_i$)
-
-  \Statex \textit{// Notify donor leader}
-\State SEND\_RPC(donor\_leader, G\_i\_Done($G_i$))
-\Statex \textbf{end upon}
+  \Statex
+  \State \fn{Send\_RPC}(donor\_leader, \msg{g\_i\_done}($G_i$))
+\EndUpon
 
 \Statex
 
-\Statex \textbf{upon} APPEND\_ENTRIES(entry) from R\_i \textbf{do}
-
-  \If{entry.metadata $= \texttt{RDMA\_DONE}(\texttt{txn\_id}, G_i)$}
-      \State{$\texttt{RDMA\_RECEIVED}[R_i][G_i] = \texttt{true}$}
+\Upon{\fn{Append\_Entries}(entry) \textbf{from} $R_i$}
+  \If{entry.metadata $= \msg{rdma\_done}(\texttt{txn\_id}, G_i)$}
+    \State $\texttt{RDMA\_RECEIVED}[R_i][G_i] \leftarrow \texttt{true}$
   \EndIf
+  \State \fn{Append\_To\_Log}(entry)
+  \State \fn{Reply\_Success}()
+\EndUpon
 
-  % \If{entry.type $= \texttt{UPDATE\_INDEX}(\texttt{txn\_id}, G_i)$}
-  %   \If{$\texttt{RDMA\_RECEIVED}[self][G_i] = \texttt{false}$}
-  %     \State REJECT\_APPEND()
-  %     \State \textbf{return}
-  %   \EndIf
-  % \EndIf
-  \State APPEND\_TO\_LOG(entry)
-  \State REPLY\_SUCCESS()
-\Statex \textbf{end upon}
 \end{algorithmic}
-\normalsize
 \end{algorithm}

@@ -1,44 +1,38 @@
-\begin{algorithm}[H]
-\footnotesize
-\caption{MIGRATE\_GROUP (Leader-to-Leader)}
+\begin{algorithm}[t]
+\small
+\caption{Leader-to-Leader Migration of Group $G_i$}
+\label{alg:leader-to-leader}
 \begin{algorithmic}[1]
-\Procedure{MIGRATE\_GROUP}{$G_i$, $L_r$}
-  \State RAFT\_APPEND($G_i$\_START)
-  \State RAFT\_COMMIT()
+\Procedure{Migrate\_Group}{$G_i$, $L_r$}
 
-  \Statex \textit{// get the block addresses for the slots}
-  \State $B_s \leftarrow$ ALLOCATOR.get\_blocks($G_i$.slots)
+  \phasesep{Intra-donor: prepare}
 
-  \Statex \textit{// flush the logged writes to the actual blocks}
+  \State \fn{Raft\_Append}($G_i$\_START)
+  \State \fn{Raft\_Commit}()
+
+  \State $B_s \leftarrow$ \fn{Allocator.Get\_Blocks}($G_i$.slots)
   \For{\textbf{each} slot \textbf{in} $G_i$.slots}
-    \State FLUSH\_LOG\_ENTRIES\_TO\_BLOCK(slot)
+    \State \fn{Flush\_Log\_Entries\_To\_Block}(slot)
   \EndFor
+  \State $M_s \leftarrow$ \fn{Register\_RDMA}($B_s$)
 
-  \Statex \textit{// register the RDMA memory regions}
-  \State $M_s \leftarrow$ REGISTER\_RDMA($B_s$)
+  \phasesep{Leader-to-leader: transfer}
 
-  \Statex \textit{// send prepare RPC to recipient with buffer metadata}
-  \State SEND($L_r$, PREPARE($G_i$, meta($M_s$)))
-  \State $M_d \leftarrow$ WAIT($L_r$, PREPARE\_OK)
+  \State \fn{Send}($L_r$, \msg{prepare}($G_i$, meta($M_s$)))
+  \State $M_d \leftarrow$ \fn{Wait}($L_r$, \msg{prepare\_ok})
 
-  \Statex \textit{// perform RDMA transfer}
-  \For{($m_s$, $m_d$) \textbf{in} ZIP($M_s$, $M_d$)}
-    \State RDMA\_WRITE($m_s$.addr, $m_d$.addr, $m_s$.size, $m_d$.rkey)
+  \For{($m_s$, $m_d$) \textbf{in} \fn{Zip}($M_s$, $M_d$)}
+    \State \fn{RDMA\_Write}($m_s$.addr, $m_d$.addr, $m_s$.size, $m_d$.rkey)
   \EndFor
+  \State \fn{Wait\_RDMA}($G_i$)
+  \State \fn{Send}($L_r$, \msg{rdma\_done}($G_i$))
 
-  \Statex \textit{// wait for all RDMA writes to complete}
-  \State WAIT\_RDMA($G_i$)
+  \phasesep{Commit}
 
-  \Statex \textit{// notify recipient that RDMA is done}
-  \State SEND($L_r$, RDMA\_DONE($G_i$))
+  \State \fn{Wait}($L_r$, \msg{g\_i\_done}($G_i$))
+  \State \fn{Raft\_Append}($G_i$\_DONE)
+  \State \fn{Raft\_Commit}()
 
-  \Statex \textit{// wait for majority replication on recipient}
-  \State WAIT($L_r$, G\_i\_DONE($G_i$))
-
-  \Statex \textit{// mark migration group as done in Raft}
-  \State RAFT\_APPEND($G_i$\_DONE)
-  \State RAFT\_COMMIT()
 \EndProcedure
 \end{algorithmic}
-\normalsize
 \end{algorithm}

@@ -1,32 +1,36 @@
-\begin{algorithm}[H]
-\footnotesize
+\begin{algorithm}[t]
+\small
 \caption{Recipient Leader Recovery}
+\label{alg:recipient-leader-recovery}
 \begin{algorithmic}[1]
-\Statex \textbf{upon} LEADER\_ELECTION\_COMPLETE \textbf{do}
-  \If{self.group\_type $\neq \texttt{RECIPIENT}$ \textbf{or} self $\neq \texttt{LEADER}$}
+
+\Upon{\msg{leader\_election\_complete}}
+  \If{self.group\_type $\neq$ \texttt{RECIPIENT} \textbf{or} self $\neq$ \texttt{LEADER}}
     \State \textbf{return}
   \EndIf
 
-  \Statex \textit{// Groups for which this recipient has metadata or data but INDEX\_UPDATE not yet committed}
-  \State active\_groups $\leftarrow$ QUERY\_Gi\_WITH\_STATE(PREPARED) OR WITH\_STATE(TRANSFERRED)
+  \phasesep{Resume incomplete groups}
+
+  \State active\_groups $\leftarrow$ \fn{Query\_Gi\_With\_State}(\msg{prepared})
+  \Statex \hspace{\algorithmicindent}\hspace{\algorithmicindent} \textbf{or} \fn{Query\_Gi\_With\_State}(\msg{transferred})
 
   \For{\textbf{each} $G_i$ \textbf{in} active\_groups}
-    \State WAIT\_UNTIL\_MAJORITY\_OF\_RDMA\_RECEIVED[Ri][Gi] = true
-    \If{RDMA\_RECEIVED[self][Gi] == false}
-      \State ASK\_THE\_DATA\_FROM\_DONOR
-      \State WAIT\_UNTIL\_RDMA\_DONE\_OF\_Gi
+
+    \State \textbf{wait until} majority of $\texttt{RDMA\_RECEIVED}[R_i][G_i] = \texttt{true}$
+
+    \If{$\texttt{RDMA\_RECEIVED}[\texttt{self}][G_i] = \texttt{false}$}
+      \State \fn{Ask\_Data\_From\_Donor}() \Comment{self missed the data}
+      \State \textbf{wait until} \msg{rdma\_done} of $G_i$
     \EndIf
 
-    \State RAFT\_APPEND(\texttt{INDEX\_UPDATE}($G_i$))
-    \State RAFT\_COMMIT()
-    \State APPLY\_UPDATE\_INDEX($G_i$)
+    \phasesep{Finalize index update}
+
+    \State \fn{Raft\_Append}(\msg{index\_update}($G_i$))
+    \State \fn{Raft\_Commit}()
+    \State \fn{Apply\_Update\_Index}($G_i$)
 
   \EndFor
-  \Statex \textbf{end upon}
-
-  \Statex
+\EndUpon
 
 \end{algorithmic}
-\normalsize
 \end{algorithm}
-
