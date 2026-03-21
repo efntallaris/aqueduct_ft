@@ -71,7 +71,7 @@ In case of a crash, instead of rolling back a partially completed migration tran
 A node that recovers mid-migration replays its Raft log to reconstruct progress. If a recipient replica recovers and does not have the migrated data, it requests it from the recipient leader or, if unavailable, from the donor replica group.
 
 
-\subsection{Fault Tolerant Migration protocol overview}
+\subsection{Fault Tolerant Migration protocol}
 \label{sec:migration-protocol}
 
 The migration protocol is designed to operate concurrently with client requests and relies on Raft for coordination of source and reciepient,
