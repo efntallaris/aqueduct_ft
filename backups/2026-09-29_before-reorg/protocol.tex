@@ -1,0 +1,172 @@
+% Fault-tolerant migration protocol, organised around the replicated-log
+% entries. Replaces design.tex:74-205 (kept there inside \iffalse ... \fi).
+% \openq{...} marks decisions that are still open; it prints in red.
+\providecommand{\openq}[1]{{\color{red}[OPEN: #1]}}
+
+\subsection{Fault-tolerant migration protocol}
+\label{sec:migration-protocol}
+
+\paragraph{Roles and channels.}
+A migration moves a set of slots from a \emph{donor} replica group to a \emph{recipient} replica group.
+A coordinator $C$ splits the slots into \emph{migration groups} $G_1, \dots, G_n$ and instructs the donor leader to migrate them to the recipient leader; together, the groups form one migration transaction.
+On each leader, the \emph{Migration Manager (MM)} drives the protocol.
+The protocol uses three channels, which Fig.~\ref{fig:migration_flow} draws differently:
+RPCs for small control messages,
+one-sided RDMA writes for the bulk data,
+and entries appended to each group's replicated (Raft) log for every decision that must survive a crash.
+Bulk data never goes through the log.
+
+\paragraph{Guarantees.}
+Under the fault model of Section~\ref{sec:fault-model}, the protocol guarantees that
+(i)~no committed write is lost,
+(ii)~a read never observes partially migrated or unreplicated data, and
+(iii)~a migration that has started rolls forward to completion; it is never rolled back.
+
+\subsection{Migration log entries}
+\label{sec:log-entries}
+
+The progress of each group $G_i$ is recorded by five entries in the donor's and the recipient's Raft logs (Table~\ref{tab:log-entries}).
+Every replica learns how far the migration got by applying its log, so a newly elected leader resumes from the last committed entry instead of relying on in-memory state, which a crash loses.
+
+\begin{table}[t]
+  \centering
+  \footnotesize
+  \caption{Replicated-log entries recording the migration of group $G_i$}
+  \label{tab:log-entries}
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabular}{@{}l l >{\raggedright\arraybackslash}p{2.3cm} >{\raggedright\arraybackslash}p{2.2cm}@{}}
+    \hline
+    \textbf{Entry} & \textbf{Log} & \textbf{Appended when} & \textbf{Enables} \\
+    \hline
+    \texttt{$G_i$\_START}           & donor     & before the transfer of $G_i$ & a new donor leader to resume $G_i$ \\
+    \texttt{TXN\_START($G_i$)}      & recipient & before the recipient serves client operations on $G_i$ & tombstones for deleted keys \\
+    \texttt{INDEX\_UPDATE($G_i$)}   & recipient & a majority holds the data and the leader's index update is done & double reads for $G_i$ to stop \\
+    \texttt{TXN\_DONE($G_i$)}       & recipient & after \texttt{INDEX\_UPDATE} commits & a new recipient leader to skip $G_i$ \\
+    \texttt{$G_i$\_DONE}            & donor     & the recipient reports $G_i$ complete & a new donor leader to skip $G_i$ \\
+    \hline
+  \end{tabular}
+\end{table}
+
+\paragraph{Durability invariant.}
+The protocol rests on a single invariant:
+\begin{quote}
+  \itshape If \texttt{INDEX\_UPDATE($G_i$)} is committed, a majority of the recipient group holds the data of $G_i$.
+\end{quote}
+It holds because the recipient leader proposes \texttt{INDEX\_UPDATE($G_i$)} only after a majority of replicas have reported receiving the data (Section~\ref{sec:intra-recipient}).
+The fault model guarantees that a majority of the group remains available; since any two majorities intersect, at least one available replica holds the data.
+A newly elected leader that lacks part of it fetches it from the other replicas of its group before serving $G_i$.
+
+\subsection{Migration phases}
+\label{sec:migration-phases}
+
+Fig.~\ref{fig:migration_flow} shows the migration of one group; the circled numbers below refer to its steps.
+The transaction completes once every group has completed.
+
+\subsubsection{Intra-donor preparation}
+\label{sec:intra-donor}
+
+\mstep{1}~The donor leader appends \texttt{$G_i$\_START} to its log and commits it, making the migration intent durable.
+It then identifies the memory blocks holding the slots of $G_i$ and registers them with its RNIC as the source of the transfer.
+\openq{item 2: when writes for $G_i$ start being redirected to the recipient, relative to \texttt{TXN\_START($G_i$)}.}
+
+\subsubsection{Leader-to-leader transfer}
+\label{sec:leader-to-leader}
+
+\mstep{2}~The donor leader sends a \texttt{prepare} RPC to the recipient leader.
+The recipient leader allocates landing buffers for $G_i$, registers them as memory regions, and replies with their addresses, sizes, and RDMA access keys (RKeys).
+\mstep{3}~Using these keys, the donor leader writes the data of $G_i$ directly into the landing buffers with one-sided RDMA writes, which do not involve the recipient's CPU.
+Once all writes complete, it sends an \texttt{RDMA\_DONE} RPC to the recipient leader.
+
+\subsubsection{Intra-recipient replication}
+\label{sec:intra-recipient}
+
+\mstep{4}~On \texttt{RDMA\_DONE}, the recipient leader starts two activities in parallel: its own index update of $G_i$ (Section~\ref{sec:index_updating}), and the replication of the data to its followers.
+Replication uses chain replication over RDMA.
+The leader orders the live replicas into a chain and writes the data to the first one; each replica that has received the data forwards it to its successor and signals it with a \texttt{CHAIN\_DONE} message.
+Replicas report which buffers they hold in their \texttt{AppendEntries} responses to the leader.
+
+\mstep{5}~Once a majority of replicas, counting the leader, hold the data and the leader's index update has finished,
+\mstep{6}~the leader proposes \texttt{INDEX\_UPDATE($G_i$)} through Raft.
+Once it commits, the durability invariant holds for $G_i$, and the leader appends \texttt{TXN\_DONE($G_i$)} to close its side of the group.
+
+\paragraph{Fast and slow paths.}
+Replicating to a majority is the \emph{fast path}: it is synchronous and must finish before double reads for $G_i$ can stop.
+The remaining replicas are on the \emph{slow path} and receive the data asynchronously, either from the ongoing chain or from the leader during log synchronization, when they apply an \texttt{AppendEntries} that contains \texttt{INDEX\_UPDATE($G_i$)}.
+Eventually, all replicas converge to the same state.
+
+\subsubsection{Index update}
+\label{sec:index_updating}
+
+Transferring the raw data is not enough: \OurImplementation{} keeps a dictionary-like index with pointers to the key-value pairs, which must be updated to point to the new memory locations.
+This \emph{index update} runs on dedicated background threads with lower scheduling priority, to minimize interference with client-serving threads.
+Since these threads run concurrently with client threads, \OurImplementation{} uses fine-grained locking for dictionary accesses.
+
+\paragraph{Stale entries.}
+During the migration, new writes for $G_i$ go to the recipient, so the transferred data may contain older versions of these keys.
+The index update detects and discards such stale entries, keeping only the most recent value of each key.
+
+\paragraph{Tombstones.}
+A key $K$ that is updated and then deleted at the recipient before the index update runs would be resurrected from the donor's older copy.
+To prevent this, recipient replicas keep tombstones for deleted keys while \texttt{TXN\_START($G_i$)} is active, and the index update skips any key with a tombstone.
+The tombstones of $G_i$ are garbage-collected once its index update finishes.
+\openq{item 3: confirm tombstones are implemented.}
+
+\subsubsection{Completion}
+\label{sec:commit-completion}
+
+\mstep{7}~The recipient leader notifies the donor leader that $G_i$ is complete, and the donor leader appends and commits \texttt{$G_i$\_DONE}.
+\openq{item 8: when ownership of the slots of $G_i$ is transferred to the recipient, per group or once at the end of the transaction.}
+
+\subsection{Serving client requests during migration}
+\label{sec:serving-during-migration}
+
+\OurImplementation{} migrates data without interrupting client-facing operations.
+Requests for slots that are not under migration are handled normally by their owning group.
+
+\paragraph{Writes.}
+Once the migration of $G_i$ begins, writes to its slots are redirected to the recipient group, processed by the recipient leader, and replicated through Raft.
+The donor applies no further writes to $G_i$, so no write-back or reconciliation is needed after the migration; stale-entry detection and tombstones keep the migrated data from overwriting these writes.
+
+\paragraph{Reads.}
+Until \texttt{INDEX\_UPDATE($G_i$)} commits, clients use double reads, so that a read never depends on data the recipient may not yet hold.
+Once it commits, the recipient group serves $G_i$ on its own: by the durability invariant, any newly elected leader can obtain the data from its group.
+
+\subsection{Failure handling}
+\label{sec:failure-handling}
+
+A crash loses all migration state that is not in a log, such as landing buffers, chains, and in-flight RDMA writes.
+Recovery therefore starts from the logs: a newly elected leader looks for groups whose start entry has no matching done entry and resumes them (Table~\ref{tab:failures}).
+Recovery only moves forward, and resending the data of a group is harmless, because the index update discards entries that are not newer than what the recipient holds.
+
+\begin{table}[t]
+  \centering
+  \footnotesize
+  \caption{Recovery after a crash during the migration of $G_i$}
+  \label{tab:failures}
+  \setlength{\tabcolsep}{3pt}
+  \begin{tabular}{@{}>{\raggedright\arraybackslash}p{1.45cm} >{\raggedright\arraybackslash}p{6.5cm}@{}}
+    \hline
+    \textbf{Crash} & \textbf{Recovery} \\
+    \hline
+    Donor follower     & None; Raft handles it and the migration is unaffected. \\
+    Donor leader       & For each group with \texttt{$G_i$\_START} but no \texttt{$G_i$\_DONE}, the new leader queries the recipient: it commits \texttt{$G_i$\_DONE} if $G_i$ is complete, waits if the data was transferred, and re-issues the RDMA writes if it was only prepared (Algorithm~\ref{alg:donor-recovery}). \\
+    Recipient follower & The leader replaces it in the chain with the next live replica (Algorithm~\ref{alg:recipient-node-recovery}); it catches up on the slow path when it recovers. \\
+    Recipient leader   & For each group with \texttt{TXN\_START($G_i$)} but no \texttt{TXN\_DONE($G_i$)}, the new leader reports the group's state to the donor leader, which retransmits the data the recipient does not hold durably; data it lacks after \texttt{INDEX\_UPDATE($G_i$)} it fetches from its group (Algorithm~\ref{alg:recipient-leader-recovery}). \\
+    Coordinator        & \openq{item 10} \\
+    \hline
+  \end{tabular}
+\end{table}
+
+\subsection{Correctness}
+\label{sec:correctness}
+
+\paragraph{No committed write is lost.}
+From the start of $G_i$'s migration, writes to $G_i$ are committed only through the recipient's Raft log, and stale-entry detection and tombstones prevent the migrated data from overwriting them.
+
+\paragraph{No read observes partial state.}
+Before \texttt{INDEX\_UPDATE($G_i$)} commits, double reads never depend on the recipient alone; after it commits, the durability invariant guarantees that the recipient group holds the data.
+
+\paragraph{Migrations roll forward.}
+Every group in flight has a committed start entry without a matching done entry in the donor's or the recipient's log.
+A newly elected leader of either group resumes it from that entry (Table~\ref{tab:failures}), and resending data is harmless, so every group eventually reaches \texttt{$G_i$\_DONE}.
+\openq{item 10: coordinator failure, and both leaders failing at once.}

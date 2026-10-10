@@ -1,0 +1,36 @@
+\begin{algorithm}[t]
+\small
+\caption{Recipient Leader Recovery}
+\label{alg:recipient-leader-recovery}
+\begin{algorithmic}[1]
+
+\Upon{\msg{leader\_election\_complete}}
+  \If{self.group\_type $\neq$ \texttt{RECIPIENT} \textbf{or} self $\neq$ \texttt{LEADER}}
+    \State \textbf{return}
+  \EndIf
+
+  \phasesep{Resume incomplete groups}
+
+  \State active\_groups $\leftarrow$ \fn{Query\_Gi\_With\_State}(\msg{prepared})
+  \Statex \hspace{\algorithmicindent}\hspace{\algorithmicindent} \textbf{or} \fn{Query\_Gi\_With\_State}(\msg{transferred})
+
+  \For{\textbf{each} $G_i$ \textbf{in} active\_groups}
+
+    \State \textbf{wait until} majority of $\texttt{RDMA\_RECEIVED}[R_i][G_i] = \texttt{true}$
+
+    \If{$\texttt{RDMA\_RECEIVED}[\texttt{self}][G_i] = \texttt{false}$}
+      \State \fn{Ask\_Data\_From\_Donor}() \Comment{self missed the data}
+      \State \textbf{wait until} \msg{rdma\_done} of $G_i$
+    \EndIf
+
+    \phasesep{Finalize index update}
+
+    \State \fn{Apply\_Update\_Index}($G_i$) \Comment{local, before logging}
+    \State \fn{Raft\_Append}(\msg{index\_update}($G_i$))
+    \State \fn{Raft\_Commit}()
+
+  \EndFor
+\EndUpon
+
+\end{algorithmic}
+\end{algorithm}

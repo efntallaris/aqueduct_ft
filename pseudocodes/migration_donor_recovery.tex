@@ -13,10 +13,10 @@
     \State \textbf{return}
   \EndIf
 
-  \phasesep{Load migration progress from Raft}
+  \phasesep{Load migration progress from the log}
 
-  \State started\_groups $\leftarrow$ \fn{Raft\_Query\_Gi\_With\_State}(\msg{started})
-  \State done\_groups $\leftarrow$ \fn{Raft\_Query\_Gi\_With\_State}(\msg{done})
+  \State started\_groups $\leftarrow$ \fn{Log\_Query\_Gi\_With\_State}(\msg{started})
+  \State done\_groups $\leftarrow$ \fn{Log\_Query\_Gi\_With\_State}(\msg{done})
 
   \For{\textbf{each} $G_i$ \textbf{in} started\_groups}
 
@@ -27,24 +27,25 @@
 
     \phasesep{Query recipient for $G_i$ state}
 
-    \State \fn{Send\_RPC}(recipient\_leader, \msg{query\_gi\_state}($G_i$))
+    \State \fn{Send\_RPC}(recipient\_leader, \msg{query\_state}($G_i$))
     \State state $\leftarrow$ \fn{Wait\_Reply}(recipient\_leader)
 
     \Statex
 
     \If{state $=$ \msg{gi\_done}}
-      \State \fn{Raft\_Append\_Log}(\msg{gi\_done}) \Comment{finalize locally}
-      \State \fn{Raft\_Commit}()
+      \State \fn{Log\_Append}(\msg{done}($G_i$)) \Comment{finalize locally}
+      \State \fn{Log\_Commit}()
 
     \ElsIf{state $=$ \msg{transferred}}
-      \State \fn{Wait\_For\_Gi\_Done}($G_i$) \Comment{replication ongoing}
+      \State \fn{Wait\_For\_Gi\_Done}($G_i$) \Comment{timeout: re-query}
 
-    \ElsIf{state $=$ \msg{prepared}}
-      \State \fn{Start\_RDMA\_Transfer}($G_i$) \Comment{re-issue RDMA writes}
-      \State \fn{Wait\_For\_Completion}($G_i$)
+    \ElsIf{state $=$ \msg{missing}}
+      \State \fn{Send\_RPC}(recipient\_leader, \msg{prepare}($G_i$))
+      \State \fn{Start\_RDMA\_Transfer}($G_i$) \Comment{resend}
+      \State \fn{Wait\_For\_Gi\_Done}($G_i$) \Comment{timeout: re-query}
 
     \Else
-      \State \fn{Defer\_Gi}($G_i$) \Comment{revisit later}
+      \State \fn{Defer\_Gi}($G_i$) \Comment{timeout: re-query later}
     \EndIf
 
   \EndFor
@@ -52,8 +53,8 @@
   \phasesep{Global transaction completion}
 
   \If{\fn{All\_Groups\_Done}()}
-    \State \fn{Raft\_Append\_Log}(\msg{txn\_migration\_done})
-    \State \fn{Raft\_Commit}()
+    \State \fn{Log\_Append}(\msg{txn\_migration\_done})
+    \State \fn{Log\_Commit}()
   \EndIf
 
 \EndUpon

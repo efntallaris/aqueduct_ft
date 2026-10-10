@@ -1,0 +1,33 @@
+
+
+\definecolor{customColor1}{HTML}{B3C5E3}
+\definecolor{customColor2}{HTML}{1B2944}
+\definecolor{customColor3}{HTML}{7A944A}
+\definecolor{customColor4}{HTML}{3D4A25}
+\definecolor{customColor5}{RGB}{252,251,244}
+
+\definecolor{darkGray}{HTML}{0d0d0d}
+\definecolor{medGray}{HTML}{d9e1c3}
+\definecolor{lightGray}{HTML}{d9e1c3}
+
+\definecolor{line}{HTML}{1B2944}
+\begin{tikzpicture}[font=\sffamily\bfseries, node distance=0cm]
+
+% Define the styles for the blocks
+%\tikzstyle{block} = [rectangle, draw, thick, line width=0.4mm, text centered, text=white, minimum height=3cm, minimum width=3cm, font=\sffamily\bfseries\fontsize{18}{20}\selectfont]
+\tikzstyle{block} = [rectangle, thick, line width=0.5mm, draw=line, text centered, text=customColor2, minimum height=3cm, minimum width=3cm, font=\sffamily\bfseries\fontsize{18}{20}\selectfont]
+
+\tikzstyle{segment_kv} = [block, fill=lightGray]
+\tikzstyle{segment_header} = [block, fill=medGray]
+
+% Nodes
+\node (segment_header) [segment_header, align=center] {Segment \\ Header \\ 4 bytes};
+\node (key_meta) [segment_kv,right=of segment_header.east, align=center] {Key \\ Meta \\ 24 bytes};
+\node (value_meta) [segment_kv,right=of key_meta.east, align=center] {Value \\ Meta \\ 24 bytes};
+\node (key_size) [segment_kv, right=of value_meta.east, align=center] {Key \\ Size \\ 4 bytes};
+\node (key) [segment_kv, right=of key_size.east, align=center] {Key \\ Variable};
+\node (value_size) [segment_kv, right=of key.east, align=center] {Value \\ Size \\ 4 bytes};
+\node (value) [segment_kv, right=of value_size.east, align=center] {Value \\ variable};
+\node (segment_footer) [segment_header, right= of value.east, align=center] {Segment \\ Footer \\ 4 bytes};
+
+\end{tikzpicture}

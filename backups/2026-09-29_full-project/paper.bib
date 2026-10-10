@@ -1,0 +1,955 @@
+@inproceedings{rocksteady,
+author = {Kulkarni, Chinmay and Kesavan, Aniraj and Zhang, Tian and Ricci, Robert and Stutsman, Ryan},
+title = {Rocksteady: Fast Migration for Low-latency In-memory Storage},
+year = {2017},
+isbn = {9781450350853},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3132747.3132784},
+doi = {10.1145/3132747.3132784},
+abstract = {Scalable in-memory key-value stores provide low-latency access times of a few microseconds and perform millions of operations per second per server. With all data in memory, these systems should provide a high level of reconfigurability. Ideally, they should scale up, scale down, and rebalance load more rapidly and flexibly than disk-based systems. Rapid reconfiguration is especially important in these systems since a) DRAM is expensive and b) they are the last defense against highly dynamic workloads that suffer from hot spots, skew, and unpredictable load. However, so far, work on in-memory key-value stores has generally focused on performance and availability, leaving reconfiguration as a secondary concern.We present Rocksteady, a live migration technique for the RAMCloud scale-out in-memory key-value store. It balances three competing goals: it migrates data quickly, it minimizes response time impact, and it allows arbitrary, fine-grained splits. Rocksteady migrates 758 MB/s between servers under high load while maintaining a median and 99.9th percentile latency of less than 40 and 250 μs, respectively, for concurrent operations without pauses, downtime, or risk to durability (compared to 6 and 45 μs during normal operation). To do this, it relies on pipelined and parallel replay and a lineagelike approach to fault-tolerance to defer re-replication costs during migration. Rocksteady allows RAMCloud to defer all repartitioning work until the moment of migration, giving it precise and timely control for load balancing.},
+booktitle = {Proceedings of the 26th Symposium on Operating Systems Principles},
+pages = {390–405},
+numpages = {16},
+location = {Shanghai, China},
+series = {SOSP '17}
+}
+
+@INPROCEEDINGS{fulva,
+  author={Hai, Jiewen and Wang, Cheng and Chen, Xusheng and Li, Tsz On and Cui, Heming and Wang, Sen},
+  booktitle={2019 38th Symposium on Reliable Distributed Systems (SRDS)}, 
+  title={Fulva: Efficient Live Migration for In-Memory Key-Value Stores with Zero Downtime}, 
+  year={2019},
+  volume={},
+  number={},
+  pages={83-8309},
+  keywords={cloud computing, key value store migration},
+  doi={10.1109/SRDS47363.2019.00019}
+}
+
+@article{ramcloud,
+author = {Ousterhout, John and Gopalan, Arjun and Gupta, Ashish and Kejriwal, Ankita and Lee, Collin and Montazeri, Behnam and Ongaro, Diego and Park, Seo Jin and Qin, Henry and Rosenblum, Mendel and Rumble, Stephen and Stutsman, Ryan and Yang, Stephen},
+title = {The RAMCloud Storage System},
+year = {2015},
+issue_date = {September 2015},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {33},
+number = {3},
+issn = {0734-2071},
+url = {https://doi.org/10.1145/2806887},
+doi = {10.1145/2806887},
+abstract = {RAMCloud is a storage system that provides low-latency access to large-scale datasets. To achieve low latency, RAMCloud stores all data in DRAM at all times. To support large capacities (1PB or more), it aggregates the memories of thousands of servers into a single coherent key-value store. RAMCloud ensures the durability of DRAM-based data by keeping backup copies on secondary storage. It uses a uniform log-structured mechanism to manage both DRAM and secondary storage, which results in high performance and efficient memory usage. RAMCloud uses a polling-based approach to communication, bypassing the kernel to communicate directly with NICs; with this approach, client applications can read small objects from any RAMCloud storage server in less than 5μs, durable writes of small objects take about 13.5μs. RAMCloud does not keep multiple copies of data online; instead, it provides high availability by recovering from crashes very quickly (1 to 2 seconds). RAMCloud’s crash recovery mechanism harnesses the resources of the entire cluster working concurrently so that recovery performance scales with cluster size.},
+journal = {ACM Trans. Comput. Syst.},
+month = {aug},
+articleno = {7},
+numpages = {55},
+keywords = {storage systems, low latency, large-scale systems, Datacenters}
+}
+
+@article{shadowfax,
+author = {Kulkarni, Chinmay and Chandramouli, Badrish and Stutsman, Ryan},
+title = {Achieving high throughput and elasticity in a larger-than-memory store},
+year = {2021},
+issue_date = {April 2021},
+publisher = {VLDB Endowment},
+volume = {14},
+number = {8},
+issn = {2150-8097},
+url = {https://doi.org/10.14778/3457390.3457406},
+doi = {10.14778/3457390.3457406},
+abstract = {Millions of sensors, mobile applications and machines now generate billions of events. Specialized many-core key-value stores (KVSs) can ingest and index these events at high rates (over 100 Mops/s on one machine) if events are generated on the same machine; however, to be practical and cost-effective they must ingest events over the network and scale across cloud resources elastically.We present Shadowfax, a new distributed KVS based on FASTER, that transparently spans DRAM, SSDs, and cloud blob storage while serving 130 Mops/s/VM over commodity Azure VMs using conventional Linux TCP. Beyond high single-VM performance, Shadowfax uses a unique approach to distributed reconfiguration that avoids any server-side key ownership checks or cross-core coordination both during normal operation and migration. Hence, Shadowfax can shift load in 17 s to improve system throughput by 10 Mops/s with little disruption. Compared to the state-of-the-art, it has 8x better throughput (than Seastar+memcached) and avoids costly I/O to move cold data during migration. On 12 machines, Shadowfax retains its high throughput to perform 930 Mops/s, which, to the best of our knowledge, is the highest reported throughput for a distributed KVS used for large-scale data ingestion and indexing.},
+journal = {Proc. VLDB Endow.},
+month = {apr},
+pages = {1427–1440},
+numpages = {14}
+}
+
+@inproceedings{candstore,
+author = {Kim, Thomas and Wong, Daniel Lin-Kit and Ganger, Gregory R. and Kaminsky, Michael and Andersen, David G.},
+title = {High availability in cheap distributed key value storage},
+year = {2020},
+isbn = {9781450381376},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3419111.3421290},
+doi = {10.1145/3419111.3421290},
+abstract = {Memory-based storage currently offers the highest-performance distributed storage, keeping the primary copy of all data in DRAM. Recent advances in non-volatile main memory (NVMM) technologies promise latency similar to DRAM at reduced cost and energy, but will make providing high availability more challenging. Previous approaches to failure recovery involve maintaining multiple identical replicas or relying on fast offline restoration of data from backup replicas stored on SSD. Unfortunately, NVMM's combination of lower write throughput and increased storage density means that offline restoration can no longer provide sufficiently fast recovery, and maintaining multiple identical replicas is generally cost prohibitive.CANDStore is a strongly consistent, distributed, replicated key-value store that uses a new fast crash recovery protocol. As a result, CANDStore can use NVMM and NVMe SSD technology to provide low-latency distributed storage that is cheaper and higher-availability than existing main memory-based distributed storage. Our evaluation shows that CANDStore's recovery protocol enables the system to restore performance and meet SLOs after the failure of a primary node 4.5--10.5x faster than offline recovery.},
+booktitle = {Proceedings of the 11th ACM Symposium on Cloud Computing},
+pages = {165–178},
+numpages = {14},
+keywords = {distributed storage, fault tolerance, persistent memory},
+location = {Virtual Event, USA},
+series = {SoCC '20}
+}
+
+@inproceedings{squall,
+author = {Elmore, Aaron J. and Arora, Vaibhav and Taft, Rebecca and Pavlo, Andrew and Agrawal, Divyakant and El Abbadi, Amr},
+title = {Squall: Fine-Grained Live Reconfiguration for Partitioned Main Memory Databases},
+year = {2015},
+isbn = {9781450327589},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2723372.2723726},
+doi = {10.1145/2723372.2723726},
+abstract = {For data-intensive applications with many concurrent users, modern distributed main memory database management systems (DBMS) provide the necessary scale-out support beyond what is possible with single-node systems. These DBMSs are optimized for the short-lived transactions that are common in on-line transaction processing (OLTP) workloads. One way that they achieve this is to partition the database into disjoint subsets and use a single-threaded transaction manager per partition that executes transactions one-at-a-time in serial order. This minimizes the overhead of concurrency control mechanisms, but requires careful partitioning to limit distributed transactions that span multiple partitions. Previous methods used off-line analysis to determine how to partition data, but the dynamic nature of these applications means that they are prone to hotspots. In these situations, the DBMS needs to reconfigure how data is partitioned in real-time to maintain performance objectives. Bringing the system off-line to reorganize the database is unacceptable for on-line applications.To overcome this problem, we introduce the Squall technique for supporting live reconfiguration in partitioned, main memory DBMSs. Squall supports fine-grained repartitioning of databases in the presence of distributed transactions, high throughput client workloads, and replicated data. An evaluation of our approach on a distributed DBMS shows that Squall can reconfigure a database with no downtime and minimal overhead on transaction latency.},
+booktitle = {Proceedings of the 2015 ACM SIGMOD International Conference on Management of Data},
+pages = {299–313},
+numpages = {15},
+keywords = {load-balancing, migration, reconfiguration},
+location = {Melbourne, Victoria, Australia},
+series = {SIGMOD '15}
+}
+
+@inproceedings {netmigrate,
+author = {Zeying Zhu and Yibo Zhao and Zaoxing Liu},
+title = {{In-Memory} {Key-Value} Store Live Migration with {NetMigrate}},
+booktitle = {22nd USENIX Conference on File and Storage Technologies (FAST 24)},
+year = {2024},
+isbn = {978-1-939133-38-0},
+address = {Santa Clara, CA},
+pages = {209--224},
+url = {https://www.usenix.org/conference/fast24/presentation/zhu},
+publisher = {USENIX Association},
+month = feb
+}
+
+@inproceedings {ford,
+author = {Ming Zhang and Yu Hua and Pengfei Zuo and Lurong Liu},
+title = {{FORD}: Fast One-sided {RDMA-based} Distributed Transactions for Disaggregated Persistent Memory},
+booktitle = {20th USENIX Conference on File and Storage Technologies (FAST 22)},
+year = {2022},
+isbn = {978-1-939133-26-7},
+address = {Santa Clara, CA},
+pages = {51--68},
+url = {https://www.usenix.org/conference/fast22/presentation/zhang-ming},
+publisher = {USENIX Association},
+month = feb
+}
+
+@inproceedings {fasst,
+author = {Anuj Kalia and Michael Kaminsky and David G. Andersen},
+title = {{FaSST}: Fast, Scalable and Simple Distributed Transactions with {Two-Sided} ({{{{{RDMA}}}}}) Datagram {RPCs}},
+booktitle = {12th USENIX Symposium on Operating Systems Design and Implementation (OSDI 16)},
+year = {2016},
+isbn = {978-1-931971-33-1},
+address = {Savannah, GA},
+pages = {185--201},
+url = {https://www.usenix.org/conference/osdi16/technical-sessions/presentation/kalia},
+publisher = {USENIX Association},
+month = nov
+}
+
+@inproceedings{kvdirect,
+author = {Li, Bojie and Ruan, Zhenyuan and Xiao, Wencong and Lu, Yuanwei and Xiong, Yongqiang and Putnam, Andrew and Chen, Enhong and Zhang, Lintao},
+title = {KV-Direct: High-Performance In-Memory Key-Value Store with Programmable NIC},
+year = {2017},
+isbn = {9781450350853},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3132747.3132756},
+doi = {10.1145/3132747.3132756},
+abstract = {Performance of in-memory key-value store (KVS) continues to be of great importance as modern KVS goes beyond the traditional object-caching workload and becomes a key infrastructure to support distributed main-memory computation in data centers. Recent years have witnessed a rapid increase of network bandwidth in data centers, shifting the bottleneck of most KVS from the network to the CPU. RDMA-capable NIC partly alleviates the problem, but the primitives provided by RDMA abstraction are rather limited. Meanwhile, programmable NICs become available in data centers, enabling in-network processing. In this paper, we present KV-Direct, a high performance KVS that leverages programmable NIC to extend RDMA primitives and enable remote direct key-value access to the main host memory.We develop several novel techniques to maximize the throughput and hide the latency of the PCIe connection between the NIC and the host memory, which becomes the new bottleneck. Combined, these mechanisms allow a single NIC KV-Direct to achieve up to 180 M key-value operations per second, equivalent to the throughput of tens of CPU cores. Compared with CPU based KVS implementation, KV-Direct improves power efficiency by 3x, while keeping tail latency below 10 μs. Moreover, KV-Direct can achieve near linear scalability with multiple NICs. With 10 programmable NIC cards in a commodity server, we achieve 1.22 billion KV operations per second, which is almost an order-of-magnitude improvement over existing systems, setting a new milestone for a general-purpose in-memory key-value store.},
+booktitle = {Proceedings of the 26th Symposium on Operating Systems Principles},
+pages = {137–152},
+numpages = {16},
+keywords = {Programmable Hardware, Performance, Key-Value Store},
+location = {Shanghai, China},
+series = {SOSP '17}
+}
+
+
+@inproceedings{sla,
+author = {Terry, Douglas B. and Prabhakaran, Vijayan and Kotla, Ramakrishna and Balakrishnan, Mahesh and Aguilera, Marcos K. and Abu-Libdeh, Hussam},
+title = {Consistency-based service level agreements for cloud storage},
+year = {2013},
+isbn = {9781450323888},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2517349.2522731},
+doi = {10.1145/2517349.2522731},
+abstract = {Choosing a cloud storage system and specific operations for reading and writing data requires developers to make decisions that trade off consistency for availability and performance. Applications may be locked into a choice that is not ideal for all clients and changing conditions. Pileus is a replicated key-value store that allows applications to declare their consistency and latency priorities via consistency-based service level agreements (SLAs). It dynamically selects which servers to access in order to deliver the best service given the current configuration and system conditions. In application-specific SLAs, developers can request both strong and eventual consistency as well as intermediate guarantees such as read-my-writes. Evaluations running on a worldwide test bed with geo-replicated data show that the system adapts to varying client-server latencies to provide service that matches or exceeds the best static consistency choice and server selection scheme.},
+booktitle = {Proceedings of the Twenty-Fourth ACM Symposium on Operating Systems Principles},
+pages = {309–324},
+numpages = {16},
+keywords = {storage, service level agreement, replication, consistency, cloud computing},
+location = {Farminton, Pennsylvania},
+series = {SOSP '13}
+}
+
+@article{memcached,
+  title={Distributed caching with memcached},
+  author={Fitzpatrick, Brad},
+  journal={Linux journal},
+  volume={2004},
+  number={124},
+  pages={5},
+  year={2004},
+  publisher={Belltown Media Houston, TX}
+}
+
+
+@Inproceedings{dynamodb,
+ author = {Giuseppe DeCandia and Deniz Hastorun and Madan Jampani and Gunavardhan Kakulapati and Avinash Lakshman and Alex Pilchin and Swaminathan Sivasubramanian and Peter Vosshall and Werner Vogels 
+},
+ title = {Dynamo: Amazon’s highly available key-value store},
+ year = {2007},
+ url = {https://www.amazon.science/publications/dynamo-amazons-highly-available-key-value-store},
+ booktitle = {ACM Symposium on Operating System Principles},
+}
+
+@inproceedings{jemalloc,
+  title={A scalable concurrent malloc(3) implementation for FreeBSD},
+  author={Evans, Jason},
+  booktitle={Proc. of the bsdcan conference, ottawa, canada},
+  year={2006}
+}
+
+
+@inproceedings {tcmalloc,
+author = {A.H. Hunter and Chris Kennelly and Paul Turner and Darryl Gove and Tipp Moseley and Parthasarathy Ranganathan},
+title = {Beyond malloc efficiency to fleet efficiency: a hugepage-aware memory allocator},
+booktitle = {15th {USENIX} Symposium on Operating Systems Design and Implementation ({OSDI} 21)},
+year = {2021},
+isbn = {978-1-939133-22-9},
+pages = {257--273},
+url = {https://www.usenix.org/conference/osdi21/presentation/hunter},
+publisher = {{USENIX} Association},
+month = jul
+}
+
+@INPROCEEDINGS{durner_paper,
+author = {Durner, Dominik and Leis, Viktor and Neumann, Thomas},
+title = {On the Impact of Memory Allocation on High-Performance Query Processing},
+year = {2019},
+isbn = {9781450368018},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3329785.3329918},
+doi = {10.1145/3329785.3329918},
+abstract = {Somewhat surprisingly, the behavior of analytical query engines is crucially affected by the dynamic memory allocator used. Memory allocators highly influence performance, scalability, memory efficiency and memory fairness to other processes. In this work, we provide the first comprehensive experimental analysis on the impact of memory allocation for high-performance query engines. We test five state-of-the-art dynamic memory allocators and discuss their strengths and weaknesses within our DBMS. The right allocator can increase the performance of TPC-DS (SF 100) by 2.7x on a 4-socket Intel Xeon server.},
+booktitle = {Proceedings of the 15th International Workshop on Data Management on New Hardware},
+articleno = {21},
+numpages = {3},
+location = {Amsterdam, Netherlands},
+series = {DaMoN'19}
+}
+
+@INPROCEEDINGS{hoard_paper,
+author = {Berger, Emery D. and McKinley, Kathryn S. and Blumofe, Robert D. and Wilson, Paul R.},
+title = {Hoard: A Scalable Memory Allocator for Multithreaded Applications},
+year = {2000},
+isbn = {1581133170},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/378993.379232},
+doi = {10.1145/378993.379232},
+abstract = {Parallel, multithreaded C and C++ programs such as web servers, database managers, news servers, and scientific applications are becoming increasingly prevalent. For these applications, the memory allocator is often a bottleneck that severely limits program performance and scalability on multiprocessor systems. Previous allocators suffer from problems that include poor performance and scalability, and heap organizations that introduce false sharing. Worse, many allocators exhibit a dramatic increase in memory consumption when confronted with a producer-consumer pattern of object allocation and freeing. This increase in memory consumption can range from a factor of P (the number of processors) to unbounded memory consumption.This paper introduces Hoard, a fast, highly scalable allocator that largely avoids false sharing and is memory efficient. Hoard is the first allocator to simultaneously solve the above problems. Hoard combines one global heap and per-processor heaps with a novel discipline that provably bounds memory consumption and has very low synchronization costs in the common case. Our results on eleven programs demonstrate that Hoard yields low average fragmentation and improves overall program performance over the standard Solaris allocator by up to a factor of 60 on 14 processors, and up to a factor of 18 over the next best allocator we tested.},
+booktitle = {Proceedings of the Ninth International Conference on Architectural Support for Programming Languages and Operating Systems},
+pages = {117–128},
+numpages = {12},
+location = {Cambridge, Massachusetts, USA},
+series = {ASPLOS IX}
+}
+
+
+@inproceedings{rdma-sockets-study,  
+author={Subramoni, Hari and Lai, Ping and Luo, Miao and Panda, Dhabaleswar K.},  
+booktitle={2009 IEEE International Conference on Cluster Computing and Workshops},   
+title={RDMA over Ethernet — A preliminary study},   
+year={2009},  
+volume={},  
+number={},  
+pages={1-9},  
+doi={10.1109/CLUSTR.2009.5289144}}
+
+@inproceedings{kallia-rdma,
+author = {Kalia, Anuj and Kaminsky, Michael and Andersen, David G.},
+title = {Using RDMA efficiently for key-value services},
+year = {2014},
+isbn = {9781450328364},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2619239.2626299},
+doi = {10.1145/2619239.2626299},
+abstract = {This paper describes the design and implementation of HERD, a key-value system designed to make the best use of an RDMA network. Unlike prior RDMA-based key-value systems, HERD focuses its design on reducing network round trips while using efficient RDMA primitives; the result is substantially lower latency, and throughput that saturates modern, commodity RDMA hardware.HERD has two unconventional decisions: First, it does not use RDMA reads, despite the allure of operations that bypass the remote CPU entirely. Second, it uses a mix of RDMA and messaging verbs, despite the conventional wisdom that the messaging primitives are slow. A HERD client writes its request into the server's memory; the server computes the reply. This design uses a single round trip for all requests and supports up to 26 million key-value operations per second with 5μs average latency. Notably, for small key-value items, our full system throughput is similar to native RDMA read throughput and is over 2X higher than recent RDMA-based key-value systems. We believe that HERD further serves as an effective template for the construction of RDMA-based datacenter services.},
+booktitle = {Proceedings of the 2014 ACM Conference on SIGCOMM},
+pages = {295–306},
+numpages = {12},
+keywords = {key-value stores, infiniband, ROCE, RDMA},
+location = {Chicago, Illinois, USA},
+series = {SIGCOMM '14}
+}
+
+@inproceedings {mitchell-rdma,
+author = {Christopher Mitchell and Yifeng Geng and Jinyang Li},
+title = {Using {One-Sided} {RDMA} Reads to Build a Fast, {CPU-Efficient} {Key-Value} Store},
+booktitle = {2013 USENIX Annual Technical Conference (USENIX ATC 13)},
+year = {2013},
+isbn = {978-1-931971-01-0},
+address = {San Jose, CA},
+pages = {103--114},
+url = {https://www.usenix.org/conference/atc13/technical-sessions/presentation/mitchell},
+publisher = {USENIX Association},
+month = jun
+}
+
+@inproceedings{dram-farahani,
+author = {Farmahini-Farahani, Amin and Gurumurthi, Sudhanva and Loh, Gabriel and Ignatowski, Michael},
+title = {Challenges of High-Capacity DRAM Stacks and Potential Directions},
+year = {2018},
+isbn = {9781450361132},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3286475.3286484},
+doi = {10.1145/3286475.3286484},
+abstract = {With rapid growth in data volumes and an increase in number of CPU/GPU cores per chip, the capacity and bandwidth of main memory can be scaled up to accommodate performance requirements of data-intensive applications. Recent 3D-stacked in-package memory devices such as high-bandwidth memory (HBM) and similar technologies can provide high amounts of memory bandwidth at low access energy. However, 3D-stacked in-package memory have limited memory capacity. In this paper, we study and present challenges of scaling the capacity of 3D-stacked memory devices by stacking more DRAM dies within a device and building taller memory stacks. We also present potential directions and mitigations to building tall HBM stacks of DRAM dies. Although taller stacks are a potentially interesting approach to increase HBM capacity, we show that more research is needed to enable high-capacity memory stacks while simultaneously scaling up their memory bandwidth. Specifically, alternative bonding and stacking technologies can be investigated as a potentially major enabler of tall HBM stacks.},
+booktitle = {Proceedings of the Workshop on Memory Centric High Performance Computing},
+pages = {4–13},
+numpages = {10},
+keywords = {Memory, HBM, DRAM, Capacity, 3D Stacking},
+location = {Dallas, TX, USA},
+series = {MCHPC'18}
+}
+
+
+@article{B-tree,
+author = {Comer, Douglas},
+title = {Ubiquitous B-Tree},
+year = {1979},
+issue_date = {June 1979},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {11},
+number = {2},
+issn = {0360-0300},
+url = {https://doi.org/10.1145/356770.356776},
+doi = {10.1145/356770.356776},
+journal = {ACM Comput. Surv.},
+month = jun,
+pages = {121–137},
+numpages = {17}
+}
+
+
+@INPROCEEDINGS{wan-study-rdma,
+  author={Wan, Yong and Feng, Dan and Wang, Fang and Ming, Liang and Xie, Yulai},
+  booktitle={2012 IEEE Seventh International Conference on Networking, Architecture, and Storage}, 
+  title={An In-Depth Analysis of TCP and RDMA Performance on Modern Server Platform}, 
+  year={2012},
+  volume={},
+  number={},
+  pages={164-171},
+  keywords={Protocols;Bandwidth;Servers;Computer architecture;Central Processing Unit;Hardware;Computers;TCP;RDMA;performance},
+  doi={10.1109/NAS.2012.25}}
+
+
+@inproceedings{frey-study-rdma,
+author = {Frey, Philip Werner and Alonso, Gustavo},
+title = {Minimizing the Hidden Cost of RDMA},
+year = {2009},
+isbn = {9780769536590},
+publisher = {IEEE Computer Society},
+address = {USA},
+url = {https://doi.org/10.1109/ICDCS.2009.32},
+doi = {10.1109/ICDCS.2009.32},
+abstract = {Remote Direct Memory Access (RDMA) is a mechanism whereby data is moved directly between the application memory of the local and remote computer. In bypassing the operating system, RDMA significantly reduces the CPU cost of large data transfers and eliminates intermediate copying across buffers, thereby making it very attractive for implementing distributed applications. With the advent of hardware implementations of RDMA over Ethernet (iWARP), its advantages have become even more obvious. In this paper we analyze the applicability of RDMA and identify hidden costs in the setup of its interactions that, if not handled carefully, remove any performance advantage, especially in hardware implementations. From an application point of view, the major difference to TCP/IP based communication is that the buffer management has to be done explicitly by the application. Without the proper optimizations, RDMA loses all its advantages. We discuss the problem in detail, analyze what applications can profit from RDMA, present a number of optimization strategies, and show through extensive performance experiments that these optimizations make a substantial difference in the overall performance of RDMA based applications.},
+booktitle = {Proceedings of the 2009 29th IEEE International Conference on Distributed Computing Systems},
+pages = {553–560},
+numpages = {8},
+keywords = {iWARP, RDMA, Performance, Buffer Management, Application Suitability},
+series = {ICDCS '09}
+}
+
+@INPROCEEDINGS{tezuka-pin-down-cache,
+  author={Tezuka, H. and O'Carroll, F. and Hori, A. and Ishikawa, Y.},
+  booktitle={Proceedings of the First Merged International Parallel Processing Symposium and Symposium on Parallel and Distributed Processing}, 
+  title={Pin-down cache: a virtual memory management technique for zero-copy communication}, 
+  year={1998},
+  volume={},
+  number={},
+  pages={308-314},
+  keywords={Memory management;Libraries;Bandwidth;Kernel;Communication system control;Operating systems;Message passing;Access protocols;Engines;Hardware},
+  doi={10.1109/IPPS.1998.669932}}
+
+
+@inproceedings{lite-rdma,
+author = {Tsai, Shin-Yeh and Zhang, Yiying},
+title = {LITE Kernel RDMA Support for Datacenter Applications},
+year = {2017},
+isbn = {9781450350853},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3132747.3132762},
+doi = {10.1145/3132747.3132762},
+abstract = {Recently, there is an increasing interest in building data-center applications with RDMA because of its low-latency, high-throughput, and low-CPU-utilization benefits. However, RDMA is not readily suitable for datacenter applications. It lacks a flexible, high-level abstraction; its performance does not scale; and it does not provide resource sharing or flexible protection. Because of these issues, it is difficult to build RDMA-based applications and to exploit RDMA's performance benefits.To solve these issues, we built LITE, a Local Indirection TiEr for RDMA in the Linux kernel that virtualizes native RDMA into a flexible, high-level, easy-to-use abstraction and allows applications to safely share resources. Despite the widely-held belief that kernel bypassing is essential to RDMA's low-latency performance, we show that using a kernel-level indirection can achieve both flexibility and low-latency, scalable performance at the same time. To demonstrate the benefits of LITE, we developed several popular datacenter applications on LITE, including a graph engine, a MapReduce system, a Distributed Shared Memory system, and a distributed atomic logging system. These systems are easy to build and deliver good performance. For example, our implementation of PowerGraph uses only 20 lines of LITE code, while outperforming PowerGraph by 3.5x to 5.6x.},
+booktitle = {Proceedings of the 26th Symposium on Operating Systems Principles},
+pages = {306–324},
+numpages = {19},
+keywords = {RDMA, indirection, low-latency network, network stack},
+location = {Shanghai, China},
+series = {SOSP '17}
+}
+
+@inproceedings{storm,
+author = {Novakovic, Stanko and Shan, Yizhou and Kolli, Aasheesh and Cui, Michael and Zhang, Yiying and Eran, Haggai and Pismenny, Boris and Liss, Liran and Wei, Michael and Tsafrir, Dan and Aguilera, Marcos},
+title = {Storm: a fast transactional dataplane for remote data structures},
+year = {2019},
+isbn = {9781450367493},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3319647.3325827},
+doi = {10.1145/3319647.3325827},
+abstract = {RDMA technology enables a host to access the memory of a remote host without involving the remote CPU, improving the performance of distributed in-memory storage systems. Previous studies argued that RDMA suffers from scalability issues, because the NIC's limited resources are unable to simultaneously cache the state of all the concurrent network streams. These concerns led to various software-based proposals to reduce the size of this state by trading off performance.We revisit these proposals and show that they no longer apply when using newer RDMA NICs in rack-scale environments. In particular, we find that one-sided remote memory primitives lead to better performance as compared to the previously proposed unreliable datagram and kernel-based stacks. Based on this observation, we design and implement Storm, a transactional dataplane utilizing one-sided read and write-based RPC primitives. We show that Storm outperforms eRPC, FaRM, and LITE by 3.3x, 3.6x, and 17.1x, respectively, on an InfiniBand cluster with Mellanox ConnectX-4 NICs.},
+booktitle = {Proceedings of the 12th ACM International Conference on Systems and Storage},
+pages = {97–108},
+numpages = {12},
+keywords = {data structures, RPC, RDMA},
+location = {Haifa, Israel},
+series = {SYSTOR '19}
+}
+
+@INPROCEEDINGS{farm,
+  author={Oguntebi, Tayo and Hong, Sungpack and Casper, Jared and Bronson, Nathan and Kozyrakis, Christos and Olukotun, Kunle},
+  booktitle={2010 18th IEEE Annual International Symposium on Field-Programmable Custom Computing Machines}, 
+  title={FARM: A Prototyping Environment for Tightly-Coupled, Heterogeneous Architectures}, 
+  year={2010},
+  volume={},
+  number={},
+  pages={221-228},
+  keywords={Prototypes;Field programmable gate arrays;Computer architecture;Hardware;Computational modeling;Virtual prototyping;Turning;Parallel processing;Boosting;Multiprocessing systems;prototyping;coherent FPGA;FPGA communication;HyperTransport;accelerators;coprocessors},
+  doi={10.1109/FCCM.2010.41}}
+
+@inproceedings{distributed-shared-persistent-memory,
+author = {Shan, Yizhou and Tsai, Shin-Yeh and Zhang, Yiying},
+title = {Distributed shared persistent memory},
+year = {2017},
+isbn = {9781450350280},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3127479.3128610},
+doi = {10.1145/3127479.3128610},
+abstract = {Next-generation non-volatile memories (NVMs) will provide byte addressability, persistence, high density, and DRAM-like performance. They have the potential to benefit many datacenter applications. However, most previous research on NVMs has focused on using them in a single machine environment. It is still unclear how to best utilize them in distributed, datacenter environments.We introduce Distributed Shared Persistent Memory (DSPM), a new framework for using persistent memories in distributed data-center environments. DSPM provides a new abstraction that allows applications to both perform traditional memory load and store instructions and to name, share, and persist their data.We built Hotpot, a kernel-level DSPM system that provides low-latency, transparent memory accesses, data persistence, data reliability, and high availability. The key ideas of Hotpot are to integrate distributed memory caching and data replication techniques and to exploit application hints. We implemented Hotpot in the Linux kernel and demonstrated its benefits by building a distributed graph engine on Hotpot and porting a NoSQL database to Hotpot. Our evaluation shows that Hotpot outperforms a recent distributed shared memory system by 1.3\texttimes{} to 3.2\texttimes{} and a recent distributed PM-based file system by 1.5\texttimes{} to 3.0\texttimes{}.},
+booktitle = {Proceedings of the 2017 Symposium on Cloud Computing},
+pages = {323–337},
+numpages = {15},
+keywords = {persistent memory, distributed shared memory},
+location = {Santa Clara, California},
+series = {SoCC '17}
+}
+
+@inproceedings{rfp,
+author = {Su, Maomeng and Zhang, Mingxing and Chen, Kang and Guo, Zhenyu and Wu, Yongwei},
+title = {RFP: When RPC is Faster than Server-Bypass with RDMA},
+year = {2017},
+isbn = {9781450349383},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3064176.3064189},
+doi = {10.1145/3064176.3064189},
+abstract = {Remote Direct Memory Access (RDMA) has been widely deployed in modern data centers. However, existing usages of RDMA lead to a dilemma between performance and redesign cost. They either directly replace socket-based send/receive primitives with the corresponding RDMA counterpart (server-reply), which only achieves moderate performance improvement; or push performance further by using one-sided RDMA operations to totally bypass the server (server-bypass), at the cost of redesigning the software.In this paper, we introduce two interesting observations about RDMA. First, RDMA has asymmetric performance characteristics, which can be used to improve server-reply's performance. Second, the performance of server-bypass is not as good as expected in many cases, because more rounds of RDMA may be needed if the server is totally bypassed. We therefore introduce a new RDMA paradigm called Remote Fetching Paradigm (RFP). Although RFP requires users to set several parameters to achieve the best performance, it supports the legacy RPC interfaces and hence avoids the need of redesigning application-specific data structures. Moreover, with proper parameters, it can achieve even higher IOPS than that of the previous paradigms.We have designed and implemented an in-memory key-value store based on RFP to evaluate its effectiveness. Experimental results show that RFP improves performance by 1.6\texttimes{}~4\texttimes{} compared with both server-reply and server-bypass paradigms.},
+booktitle = {Proceedings of the Twelfth European Conference on Computer Systems},
+pages = {1–15},
+numpages = {15},
+location = {Belgrade, Serbia},
+series = {EuroSys '17}
+}
+
+@INPROCEEDINGS{RStore,
+  author={Trivedi, Animesh and Stuedi, Patrick and Metzler, Bernard and Lutz, Clemens and Schmatz, Martin and Gross, Thomas R.},
+  booktitle={2015 IEEE 35th International Conference on Distributed Computing Systems}, 
+  title={RStore: A Direct-Access DRAM-based Data Store}, 
+  year={2015},
+  volume={},
+  number={},
+  pages={674-685},
+  keywords={Servers;Resource management;Random access memory;Distributed databases;Bandwidth;Memory management;Next generation networking;Data storage systems;Data processing},
+  doi={10.1109/ICDCS.2015.74}}
+
+@inproceedings{file-mr,
+author = {Yang, Jian and Izraelevitz, Joseph and Swanson, Steven},
+title = {FileMR: rethinking RDMA networking for scalable persistent memory},
+year = {2020},
+isbn = {9781939133137},
+publisher = {USENIX Association},
+address = {USA},
+abstract = {The emergence of dense, byte-addressable nonvolatile main memories (NVMMs) allows application developers to combine storage and memory into a single layer. With NVMMs, servers can equip terabytes of memory that survive power outages, and all of this persistent capacity can be managed through a specialized NVMM file system. NVMMs appear to mesh perfectly with another popular technology, remote direct memory access (RDMA). RDMA gives a client direct access to memory on a remote machine and mediates this access through a memory region abstraction that handles the necessary translations and permissions.NVMM and RDMA seem eminently compatible: by combining them, we should be able to build network-attached, byte-addressable, persistent storage. Unfortunately, however, the systems were not designed to work together. An NVMM-aware file system manages persistent memory as files, whereas RDMA uses a different abstraction -- memory regions to organize remotely accessible memory. As a result, in practice, building RDMA-accessible NVMMs requires expensive translation layers resulting from this duplication of effort that spans permissions, naming, and address translation.This work introduces two changes to the existing RDMA protocol: file memory region (FileMR) and range-based address translation. These optimizations create an abstraction that combines memory regions and files: a client can directly access a file backed by NVMM file system through RDMA, addressing its contents via file offsets. By eliminating redundant translations, it minimizes the amount of translations done at the NIC, reduces the load on the NIC's translation cache and increases the hit rate by 3.8\texttimes{} - 340\texttimes{} and resulting in application performance improvement by 1.8\texttimes{} - 2.0\texttimes{}.},
+booktitle = {Proceedings of the 17th Usenix Conference on Networked Systems Design and Implementation},
+pages = {111–126},
+numpages = {16},
+location = {Santa Clara, CA, USA},
+series = {NSDI'20}
+}
+
+@inproceedings {orion,
+author = {Jian Yang and Joseph Izraelevitz and Steven Swanson},
+title = {Orion: A Distributed File System for {Non-Volatile} Main Memory and {RDMA-Capable} Networks},
+booktitle = {17th USENIX Conference on File and Storage Technologies (FAST 19)},
+year = {2019},
+isbn = {978-1-939133-09-0},
+address = {Boston, MA},
+pages = {221--234},
+url = {https://www.usenix.org/conference/fast19/presentation/yang},
+publisher = {USENIX Association},
+month = feb
+}
+
+
+@inproceedings {cloudlab,
+author = {Dmitry Duplyakin and Robert Ricci and Aleksander Maricq and Gary Wong and Jonathon Duerig and Eric Eide and Leigh Stoller and Mike Hibler and David Johnson and Kirk Webb and Aditya Akella and Kuangching Wang and Glenn Ricart and Larry Landweber and Chip Elliott and Michael Zink and Emmanuel Cecchet and Snigdhaswin Kar and Prabodh Mishra},
+title = {The Design and Operation of {CloudLab}},
+booktitle = {2019 USENIX Annual Technical Conference (USENIX ATC 19)},
+year = {2019},
+isbn = {978-1-939133-03-8},
+address = {Renton, WA},
+pages = {1--14},
+url = {https://www.usenix.org/conference/atc19/presentation/duplyakin},
+publisher = {USENIX Association},
+month = jul
+}
+
+@inproceedings{ycsb,
+author = {Cooper, Brian F. and Silberstein, Adam and Tam, Erwin and Ramakrishnan, Raghu and Sears, Russell},
+title = {Benchmarking cloud serving systems with YCSB},
+year = {2010},
+isbn = {9781450300360},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/1807128.1807152},
+doi = {10.1145/1807128.1807152},
+abstract = {While the use of MapReduce systems (such as Hadoop) for large scale data analysis has been widely recognized and studied, we have recently seen an explosion in the number of systems developed for cloud data serving. These newer systems address "cloud OLTP" applications, though they typically do not support ACID transactions. Examples of systems proposed for cloud serving use include BigTable, PNUTS, Cassandra, HBase, Azure, CouchDB, SimpleDB, Voldemort, and many others. Further, they are being applied to a diverse range of applications that differ considerably from traditional (e.g., TPC-C like) serving workloads. The number of emerging cloud serving systems and the wide range of proposed applications, coupled with a lack of apples-to-apples performance comparisons, makes it difficult to understand the tradeoffs between systems and the workloads for which they are suited. We present the "Yahoo! Cloud Serving Benchmark" (YCSB) framework, with the goal of facilitating performance comparisons of the new generation of cloud data serving systems. We define a core set of benchmarks and report results for four widely used systems: Cassandra, HBase, Yahoo!'s PNUTS, and a simple sharded MySQL implementation. We also hope to foster the development of additional cloud benchmark suites that represent other classes of applications by making our benchmark tool available via open source. In this regard, a key feature of the YCSB framework/tool is that it is extensible--it supports easy definition of new workloads, in addition to making it easy to benchmark new systems.},
+booktitle = {Proceedings of the 1st ACM Symposium on Cloud Computing},
+pages = {143–154},
+numpages = {12},
+keywords = {cloud serving database, benchmarking},
+location = {Indianapolis, Indiana, USA},
+series = {SoCC '10}
+}
+
+@misc{lettuce,
+  title        = {Lettuce - Advanced Java Redis client},
+  howpublished = {\url{https://redis.github.io/lettuce/}},
+  note         = {Accessed: 2025-06-12}
+}
+
+
+@misc{jedis,
+  title        = {Jedis},
+  howpublished = {\url{https://github.com/redis/jedis}},
+  note         = {Accessed: 2025-06-12}
+}
+
+@misc{mongodb,
+  title        = {MongoDB},
+  howpublished = {\url{https://www.mongodb.com}},
+  note         = {Accessed: 2025-06-12}
+}
+
+@article{cassandra-paper,
+author = {Lakshman, Avinash and Malik, Prashant},
+title = {Cassandra: a decentralized structured storage system},
+year = {2010},
+issue_date = {April 2010},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {44},
+number = {2},
+issn = {0163-5980},
+url = {https://doi.org/10.1145/1773912.1773922},
+doi = {10.1145/1773912.1773922},
+journal = {SIGOPS Oper. Syst. Rev.},
+month = apr,
+pages = {35–40},
+numpages = {6}
+}
+
+@inproceedings{incremental-elasticity,
+  author    = {Antonis Papaioannou and Kostas Magoutis},
+  title     = {Incremental Elasticity for NoSQL Data Stores},
+  booktitle = {2017 IEEE 36th Symposium on Reliable Distributed Systems (SRDS)},
+  year      = {2017},
+  pages     = {174--183},
+  doi       = {10.1109/SRDS.2017.26}
+}
+
+@misc{hazelcast,
+  author       = {Hazelcast},
+  title        = {Hazelcast},
+  url          = {https://hazelcast.com/},
+  note         = {Accessed: 2025-06-12}
+}
+
+@misc{ignite,
+  title         = {Apache Ignite},
+  year          = {2025},
+  howpublished  = {\url{https://ignite.apache.org}},
+  note          = {Accessed: 2025-06-12}
+}
+
+@misc{redis-pure,
+title         = {Redis},
+howpublished  = {\url{https://redis.io/}},
+note          = {Accessed 2025-05-04}
+}
+
+@misc{redisclusterconfig,
+title   = {Redis cluster specification},
+url     = {https://redis.io/docs/latest/operate/oss_and_stack/reference/cluster-spec/},
+note    = {Accessed 2025-04-27}
+}
+
+
+@inproceedings{aerie,
+author = {Volos, Haris and Nalli, Sanketh and Panneerselvam, Sankarlingam and Varadarajan, Venkatanathan and Saxena, Prashant and Swift, Michael M.},
+title = {Aerie: flexible file-system interfaces to storage-class memory},
+year = {2014},
+isbn = {9781450327046},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2592798.2592810},
+doi = {10.1145/2592798.2592810},
+abstract = {Storage-class memory technologies such as phase-change memory and memristors present a radically different interface to storage than existing block devices. As a result, they provide a unique opportunity to re-examine storage architectures. We find that the existing kernel-based stack of components, well suited for disks, unnecessarily limits the design and implementation of file systems for this new technology.We present Aerie, a flexible file-system architecture that exposes storage-class memory to user-mode programs so they can access files without kernel interaction. Aerie can implement a generic POSIX-like file system with performance similar to or better than a kernel implementation. The main benefit of Aerie, though, comes from enabling applications to optimize the file system interface. We demonstrate a specialized file system that reduces a hierarchical file system abstraction to a key/value store with fewer consistency guarantees but 20-109\% higher performance than a kernel file system.},
+booktitle = {Proceedings of the Ninth European Conference on Computer Systems},
+articleno = {14},
+numpages = {14},
+location = {Amsterdam, The Netherlands},
+series = {EuroSys '14}
+}
+
+
+@inproceedings {rdma_reda,
+author = {Waleed Reda and Marco Canini and Dejan Kosti{\'c} and Simon Peter},
+title = {{RDMA} is Turing complete, we just did not know it yet!},
+booktitle = {19th USENIX Symposium on Networked Systems Design and Implementation (NSDI 22)},
+year = {2022},
+isbn = {978-1-939133-27-4},
+address = {Renton, WA},
+pages = {71--85},
+url = {https://www.usenix.org/conference/nsdi22/presentation/reda},
+publisher = {USENIX Association},
+month = apr
+}
+
+@misc{rdma_advisor,
+      title={RDMAvisor: Toward Deploying Scalable and Simple RDMA as a Service in Datacenters}, 
+      author={Zhi Wang and Xiaoliang Wang and Zhuzhong Qian and Baoliu Ye and Sanglu Lu},
+      year={2018},
+      eprint={1802.01870},
+      archivePrefix={arXiv},
+      primaryClass={cs.DC},
+      url={https://arxiv.org/abs/1802.01870}, 
+}
+
+@article{rdma_study,
+author = {Meza, Justin and Wu, Qiang and Kumar, Sanjev and Mutlu, Onur},
+title = {A Large-Scale Study of Flash Memory Failures in the Field},
+year = {2015},
+issue_date = {June 2015},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {43},
+number = {1},
+issn = {0163-5999},
+url = {https://doi.org/10.1145/2796314.2745848},
+doi = {10.1145/2796314.2745848},
+abstract = {Servers use flash memory based solid state drives (SSDs) as a high-performance alternative to hard disk drives to store persistent data. Unfortunately, recent increases in flash density have also brought about decreases in chip-level reliability. In a data center environment, flash-based SSD failures can lead to downtime and, in the worst case, data loss. As a result, it is important to understand flash memory reliability characteristics over flash lifetime in a realistic production data center environment running modern applications and system software.This paper presents the first large-scale study of flash-based SSD reliability in the field. We analyze data collected across a majority of flash-based solid state drives at Facebook data centers over nearly four years and many millions of operational hours in order to understand failure properties and trends of flash-based SSDs. Our study considers a variety of SSD characteristics, including: the amount of data written to and read from flash chips; how data is mapped within the SSD address space; the amount of data copied, erased, and discarded by the flash controller; and flash board temperature and bus power.Based on our field analysis of how flash memory errors manifest when running modern workloads on modern SSDs, this paper is the first to make several major observations: (1) SSD failure rates do not increase monotonically with flash chip wear; instead they go through several distinct periods corresponding to how failures emerge and are subsequently detected, (2) the effects of read disturbance errors are not prevalent in the field, (3) sparse logical data layout across an SSD's physical address space (e.g., non-contiguous data), as measured by the amount of metadata required to track logical address translations stored in an SSD-internal DRAM buffer, can greatly affect SSD failure rate, (4) higher temperatures lead to higher failure rates, but techniques that throttle SSD operation appear to greatly reduce the negative reliability impact of higher temperatures, and (5) data written by the operating system to flash-based SSDs does not always accurately indicate the amount of wear induced on flash cells due to optimizations in the SSD controller and buffering employed in the system software. We hope that the findings of this first large-scale flash memory reliability study can inspire others to develop other publicly-available analyses and novel flash reliability solutions.},
+journal = {SIGMETRICS Perform. Eval. Rev.},
+month = jun,
+pages = {177–190},
+numpages = {14},
+keywords = {warehouse-scale data centers, reliability, flash memory}
+}
+
+@inproceedings{scatter-gather-sds-issues,
+author = {Raghavan, Deepti and Levis, Philip and Zaharia, Matei and Zhang, Irene},
+title = {Breakfast of champions: towards zero-copy serialization with NIC scatter-gather},
+year = {2021},
+isbn = {9781450384384},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3458336.3465287},
+doi = {10.1145/3458336.3465287},
+abstract = {Microsecond I/O will make data serialization a major bottleneck for datacenter applications. Serialization is fundamentally about data movement: serialization libraries coalesce and flatten in-memory data structures into a single transmittable buffer. CPU-based serialization approaches will hit a performance limit due to data movement overheads and be unable to keep up with modern networks.We observe that widely deployed NICs possess scatter-gather capabilities that can be re-purposed to accelerate serialization's core task of coalescing and flattening in-memory data structures. It is possible to build a completely zero-copy, zero-allocation serialization library with commodity NICs. Doing so introduces many research challenges, including using the hardware capabilities efficiently for a wide variety of non-uniform data structures, making application memory available for zero-copy I/O, and ensuring memory safety.},
+booktitle = {Proceedings of the Workshop on Hot Topics in Operating Systems},
+pages = {199–205},
+numpages = {7},
+keywords = {kernel bypass networking, datacenters, data serialization},
+location = {Ann Arbor, Michigan},
+series = {HotOS '21}
+}
+
+
+@article{dinomo,
+author = {Lee, Sekwon and Ponnapalli, Soujanya and Singhal, Sharad and Aguilera, Marcos K. and Keeton, Kimberly and Chidambaram, Vijay},
+title = {DINOMO: An Elastic, Scalable, High-Performance Key-Value Store for Disaggregated Persistent Memory},
+year = {2022},
+issue_date = {September 2022},
+publisher = {VLDB Endowment},
+volume = {15},
+number = {13},
+issn = {2150-8097},
+url = {https://doi.org/10.14778/3565838.3565854},
+doi = {10.14778/3565838.3565854},
+abstract = {We present Dinomo, a novel key-value store for disaggregated persistent memory (DPM). Dinomo is the first key-value store for DPM that simultaneously achieves high common-case performance, scalability, and lightweight online reconfiguration. We observe that previously proposed key-value stores for DPM had architectural limitations that prevent them from achieving all three goals simultaneously. Dinomo uses a novel combination of techniques such as ownership partitioning, disaggregated adaptive caching, selective replication, and lock-free and log-free indexing to achieve these goals. Compared to a state-of-the-art DPM key-value store, Dinomo achieves at least 3.8X better throughput at scale on various workloads and higher scalability, while providing fast reconfiguration.},
+journal = {Proc. VLDB Endow.},
+month = sep,
+pages = {4023–4037},
+numpages = {15}
+}
+
+@inproceedings {fusee,
+author = {Jiacheng Shen and Pengfei Zuo and Xuchuan Luo and Tianyi Yang and Yuxin Su and Yangfan Zhou and Michael R. Lyu},
+title = {{FUSEE}: A Fully {Memory-Disaggregated} {Key-Value} Store},
+booktitle = {21st USENIX Conference on File and Storage Technologies (FAST 23)},
+year = {2023},
+isbn = {978-1-939133-32-8},
+address = {Santa Clara, CA},
+pages = {81--98},
+url = {https://www.usenix.org/conference/fast23/presentation/shen},
+publisher = {USENIX Association},
+month = feb
+}
+
+@inproceedings{ditto,
+author = {Shen, Jiacheng and Zuo, Pengfei and Luo, Xuchuan and Su, Yuxin and Gu, Jiazhen and Feng, Hao and Zhou, Yangfan and Lyu, Michael R.},
+title = {Ditto: An Elastic and Adaptive Memory-Disaggregated Caching System},
+year = {2023},
+isbn = {9798400702297},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3600006.3613144},
+doi = {10.1145/3600006.3613144},
+abstract = {In-memory caching systems are fundamental building blocks in cloud services. However, due to the coupled CPU and memory on monolithic servers, existing caching systems cannot elastically adjust resources in a resource-efficient and agile manner. To achieve better elasticity, we propose to port in-memory caching systems to the disaggregated memory (DM) architecture, where compute and memory resources are decoupled and can be allocated flexibly. However, constructing an elastic caching system on DM is challenging since accessing cached objects with CPU-bypass remote memory accesses hinders the execution of caching algorithms. Moreover, the elastic changes of compute and memory resources on DM affect the access patterns of cached data, compromising the hit rates of caching algorithms. We design Ditto, the first caching system on DM, to address these challenges. Ditto first proposes a client-centric caching framework to efficiently execute various caching algorithms in the compute pool of DM, relying only on remote memory accesses. Then, Ditto employs a distributed adaptive caching scheme that adaptively switches to the best-fit caching algorithm in real-time based on the performance of multiple caching algorithms to improve cache hit rates. Our experiments show that Ditto effectively adapts to the changing resources on DM and outperforms the state-of-the-art caching systems by up to 3.6\texttimes{} in real-world workloads and 9\texttimes{} in YCSB benchmarks.},
+booktitle = {Proceedings of the 29th Symposium on Operating Systems Principles},
+pages = {675–691},
+numpages = {17},
+keywords = {disaggregated memory, RDMA, key-value cache},
+location = {Koblenz, Germany},
+series = {SOSP '23}
+}
+
+@MISC{Infiniband-spec,
+    author = {Association, InfiniBand Trade},
+     title = {InfiniBand Architecture Specification, Release 1.0, 2000},
+      year = {2000},
+      note = {http://www.infinibandta.org/specs}
+}
+
+
+@inproceedings {clover,
+author = {Shin-Yeh Tsai and Yizhou Shan and Yiying Zhang},
+title = {Disaggregating Persistent Memory and Controlling Them Remotely: An Exploration of Passive Disaggregated {Key-Value} Stores},
+booktitle = {2020 USENIX Annual Technical Conference (USENIX ATC 20)},
+year = {2020},
+isbn = {978-1-939133-14-4},
+pages = {33--48},
+url = {https://www.usenix.org/conference/atc20/presentation/tsai},
+publisher = {USENIX Association},
+month = jul
+}
+
+@inproceedings {rolex,
+author = {Pengfei Li and Yu Hua and Pengfei Zuo and Zhangyu Chen and Jiajie Sheng},
+title = {{ROLEX}: A Scalable {RDMA-oriented} Learned {Key-Value} Store for Disaggregated Memory Systems},
+booktitle = {21st USENIX Conference on File and Storage Technologies (FAST 23)},
+year = {2023},
+isbn = {978-1-939133-32-8},
+address = {Santa Clara, CA},
+pages = {99--114},
+url = {https://www.usenix.org/conference/fast23/presentation/li-pengfei},
+publisher = {USENIX Association},
+month = feb
+}
+
+@inproceedings{remus,
+author = {Kang, Junbin and Cai, Le and Li, Feifei and Zhou, Xingxuan and Cao, Wei and Cai, Songlu and Shao, Daming},
+title = {Remus: Efficient Live Migration for Distributed Databases with Snapshot Isolation},
+year = {2022},
+isbn = {9781450392495},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3514221.3526047},
+doi = {10.1145/3514221.3526047},
+abstract = {Shared-nothing, distributed databases scale transactional and analytical processing over a large data volume by spreading data across servers. However, static sharding of data across nodes makes such systems fail to timely adapt to changing workloads and struggle to obey the cloud pay-as-you-go model. Migrating shards between nodes online is a key technique to react to dynamic changes of workloads for cloud elasticity. Existing approaches introduce severely degraded performance and service interruption, resulting in SLA violation on the cloud; or they are tailor-made to deterministic databases. In this paper, we propose Remus, a new live migration approach for shared-nothing, distributed databases with snapshot isolation. Remus migrates shards between nodes with zero service interruption and minimal performance impact. This is achieved by an efficient unidirectional dual execution during migration. We implement Remus on a shared-nothing, distributed version of PolarDB-PG and evaluate it against state-of-the-art approaches using standard OLTP workloads TPC-C and YCSB, and hybrid workloads consisting of long-lived and short transactions. The results demonstrate Remus is the only effective approach to achieve the goal of zero transaction interruption, zero downtime and marginal performance impact, paving the way for applying the shared-nothing architecture to a cloud database which needs to provide elasticity while guaranteeing strict SLAs.},
+booktitle = {Proceedings of the 2022 International Conference on Management of Data},
+pages = {2232–2245},
+numpages = {14},
+keywords = {live migration, shared-nothing database, snapshot isolation},
+location = {Philadelphia, PA, USA},
+series = {SIGMOD '22}
+}
+
+@article{zebra,
+author = {Hartman, John H. and Ousterhout, John K.},
+title = {The Zebra striped network file system},
+year = {1995},
+issue_date = {Aug. 1995},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {13},
+number = {3},
+issn = {0734-2071},
+url = {https://doi.org/10.1145/210126.210131},
+doi = {10.1145/210126.210131},
+abstract = {Zebra is a network file system that increases throughput by striping the file data across multiple servers. Rather than striping each file separately, Zebra forms all the new data from each client into a single stream, which it then stripes using an approach similar to a log-structured file system. This provides high performance for writes of small files as well as for reads and writes of large files. Zebra also writes parity information in each stripe in the style of RAID disk arrays; this increases storage costs slightly, but allows the system to continue operation while a single storage server is unavailable. A prototype implementation of Zebra, built in the Sprite operating system, provides 4–5 times the throughput of the standard Sprite file system or NFS for large files and a  15–300\% improvement for writing small files.},
+journal = {ACM Trans. Comput. Syst.},
+month = aug,
+pages = {274–310},
+numpages = {37},
+keywords = {parity computation, log-structured file system, log-based striping, RAID}
+}
+
+
+@article{xfs,
+author = {Anderson, Thomas E. and Dahlin, Michael D. and Neefe, Jeanna M. and Patterson, David A. and Roselli, Drew S. and Wang, Randolph Y.},
+title = {Serverless network file systems},
+year = {1996},
+issue_date = {Feb. 1996},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {14},
+number = {1},
+issn = {0734-2071},
+url = {https://doi.org/10.1145/225535.225537},
+doi = {10.1145/225535.225537},
+abstract = {We propose a new paradigm for network file system design: serverless network file systems. While traditional network file systems rely on a central server machine, a serverless system utilizes workstations cooperating as peers to provide all file system services. Any machine in the system can store, cache, or control any block of data. Our approach uses this location independence, in combination with fast local area networks, to provide better performance and scalability than traditional file systems. Furthermore, because any machine in the system can assume the responsibilities of a failed component, our serverless design also provides high availability via redundatn data storage. To demonstrate our approach, we have implemented a prototype serverless network file system called xFS. Preliminary performance measurements suggest that our architecture achieves its goal of scalability. For instance, in a 32-node xFS system with 32 active clients, each client receives nearly as much read or write throughput as it would see if it were the only active client.},
+journal = {ACM Trans. Comput. Syst.},
+month = feb,
+pages = {41–79},
+numpages = {39},
+keywords = {RAID, log cleaning, log structured, log-based striping, logging, redundant data storage, scalable performance}
+}
+
+
+@article{lfs,
+author = {Rosenblum, Mendel and Ousterhout, John K.},
+title = {The design and implementation of a log-structured file system},
+year = {1992},
+issue_date = {Feb. 1992},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+volume = {10},
+number = {1},
+issn = {0734-2071},
+url = {https://doi.org/10.1145/146941.146943},
+doi = {10.1145/146941.146943},
+abstract = {This paper presents a new technique for disk storage management called a log-structured file system. A log-structured file system writes all modifications to disk sequentially in a log-like structure, thereby speeding up both file writing and crash recovery. The log is the only structure on disk; it contains indexing information so that files can be read back from the log efficiently. In order to maintain large free areas on disk for fast writing, we divide the log intosegmentsand use a segment cleaner to compress the live information from heavily fragmented segments. We present a series of simulations that demonstrate the efficiency of a simple cleaning policy based on cost and benefit. We have implemented a prototype  log-structured file system called Sprite LFS; it outperforms current Unix file systems by an order of magnitude for small-file writes while matching or exceeding Unix performance for reads and large writes. Even when the overhead for cleaning is included, Sprite LFS can use 70\% of the disk bandwidth for writing, whereas Unix file systems typically can use only 5–10\%.},
+journal = {ACM Trans. Comput. Syst.},
+month = feb,
+pages = {26–52},
+numpages = {27},
+keywords = {logging, log-structured, high write performance, file system performance, file system organization, fast crash recovery, disk storage management, Unix}
+}
+
+@article{albatross,
+author = {Das, Sudipto and Nishimura, Shoji and Agrawal, Divyakant and El Abbadi, Amr},
+title = {Albatross: lightweight elasticity in shared storage databases for the cloud using live data migration},
+year = {2011},
+issue_date = {May 2011},
+publisher = {VLDB Endowment},
+volume = {4},
+number = {8},
+issn = {2150-8097},
+url = {https://doi.org/10.14778/2002974.2002977},
+doi = {10.14778/2002974.2002977},
+abstract = {Database systems serving cloud platforms must serve large numbers of applications (or tenants). In addition to managing tenants with small data footprints, different schemas, and variable load patterns, such multitenant data platforms must minimize their operating costs by efficient resource sharing. When deployed over a pay-per-use infrastructure, elastic scaling and load balancing, enabled by low cost live migration of tenant databases, is critical to tolerate load variations while minimizing operating cost. However, existing databases---relational databases and Key-Value stores alike---lack low cost live migration techniques, thus resulting in heavy performance impact during elastic scaling. We present Albatross, a technique for live migration in a multitenant database serving OLTP style workloads where the persistent database image is stored in a network attached storage. Albatross migrates the database cache and the state of active transactions to ensure minimal impact on transaction execution while allowing transactions active during migration to continue execution. It also guarantees serializability while ensuring correctness during failures. Our evaluation using two OLTP benchmarks shows that Albatross can migrate a live tenant database with no aborted transactions, negligible impact on transaction latency and throughput both during and after migration, and an unavailability window as low as 300 ms.},
+journal = {Proc. VLDB Endow.},
+month = may,
+pages = {494–505},
+numpages = {12}
+}
+
+
+
+@inproceedings {nova,
+author = {Jian Xu and Steven Swanson},
+title = {{NOVA}: A Log-structured File System for Hybrid {Volatile/Non-volatile} Main Memories},
+booktitle = {14th USENIX Conference on File and Storage Technologies (FAST 16)},
+year = {2016},
+isbn = {978-1-931971-28-7},
+address = {Santa Clara, CA},
+pages = {323--338},
+url = {https://www.usenix.org/conference/fast16/technical-sessions/presentation/xu},
+publisher = {USENIX Association},
+month = feb
+}
+
+@inproceedings{slacker,
+author = {Barker, Sean and Chi, Yun and Moon, Hyun Jin and Hacig\"{u}m\"{u}\c{s}, Hakan and Shenoy, Prashant},
+title = {"Cut me some slack": latency-aware live migration for databases},
+year = {2012},
+isbn = {9781450307901},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/2247596.2247647},
+doi = {10.1145/2247596.2247647},
+abstract = {Cloud-based data management platforms often employ multitenant databases, where service providers achieve economies of scale by consolidating multiple tenants on shared servers. In such database systems, a key functionality for service providers is database migration, which is useful for dynamic provisioning, load balancing, and system maintenance. Practical migration solutions have several requirements, including high availability, low performance overhead, and self-management. We present Slacker, an end-to-end database migration system at the middleware level satisfying these requirements. Slacker leverages off-the-shelf hot backup tools to achieve live migration with effectively zero down-time. Additionally, Slacker minimizes the performance impact of migrations on both the migrating tenant and collocated tenants by leveraging 'migration slack', or resources that can be used for migration without excessively impacting query latency. We apply a PID controller to this problem, allowing Slacker to automatically detect and exploit migration slack in real time. Using our prototype, we demonstrate that Slacker effectively controls interference during migrations, maintaining latency within 10\% of a given latency target, while still performing migrations rapidly and efficiently.},
+booktitle = {Proceedings of the 15th International Conference on Extending Database Technology},
+pages = {432–443},
+numpages = {12},
+keywords = {multitenancy, database migration, control theory, cloud computing, PID controller},
+location = {Berlin, Germany},
+series = {EDBT '12}
+}
+
+@inproceedings {wei_atc,
+author = {Xingda Wei and Sijie Shen and Rong Chen and Haibo Chen},
+title = {Replication-driven Live Reconfiguration for Fast Distributed Transaction Processing},
+booktitle = {2017 USENIX Annual Technical Conference (USENIX ATC 17)},
+year = {2017},
+isbn = {978-1-931971-38-6},
+address = {Santa Clara, CA},
+pages = {335--347},
+url = {https://www.usenix.org/conference/atc17/technical-sessions/presentation/wei},
+publisher = {USENIX Association},
+month = jul
+}
+
+@inproceedings{aceso,
+author = {Hu, Zhisheng and Zuo, Pengfei and Chen, Yizou and Wang, Chao and Hu, Junliang and Yang, Ming-Chang},
+title = {Aceso: Achieving Efficient Fault Tolerance in Memory-Disaggregated Key-Value Stores},
+year = {2024},
+isbn = {9798400712517},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3694715.3695951},
+doi = {10.1145/3694715.3695951},
+abstract = {Disaggregated memory (DM) has garnered increasing attention due to high resource utilization. Fault tolerance is critical for key-value (KV) stores on DM since machine failures are common in datacenters. Existing KV stores on DM are generally based on replication to achieve fault tolerance, which however suffer from high memory space and performance overheads. In this paper, we investigate the efficiency of different fault-tolerant mechanisms on DM and reveal that checkpointing and erasure coding work best for the index and KV pairs respectively. Based on these observations, we present Aceso, a DM-based KV store that employs a hybrid fault-tolerant mechanism, combining checkpointing for the index and erasure coding for KV pairs. However, applying this hybrid mechanism to DM introduces multiple challenges, i.e., performance interference and data loss of checkpointing, slow space reclamation and failure recovery of erasure coding. To address these challenges, Aceso leverages a differential checkpointing scheme to reduce performance interference incurred by the bandwidth consumption to transmit checkpoints, a versioning approach to recover lost index updates on failures, a delta-based space reclamation mechanism to reclaim obsolete KV pairs with negligible overhead, and a tiered recovery scheme to minimize user disruption. Our experiments show that Aceso simultaneously achieves up to 2.7\texttimes{} throughput improvement, up to 54\% tail latency reduction, and 44\% memory space savings compared with the state-of-the-art replication-based KV store on DM.},
+booktitle = {Proceedings of the ACM SIGOPS 30th Symposium on Operating Systems Principles},
+pages = {127–143},
+numpages = {17},
+keywords = {disaggregated memory, RDMA, key-value store},
+location = {Austin, TX, USA},
+series = {SOSP '24}
+}
+
+@inproceedings {smart,
+author = {Xuchuan Luo and Pengfei Zuo and Jiacheng Shen and Jiazhen Gu and Xin Wang and Michael R. Lyu and Yangfan Zhou},
+title = {{SMART}: A {High-Performance} Adaptive Radix Tree for Disaggregated Memory},
+booktitle = {17th USENIX Symposium on Operating Systems Design and Implementation (OSDI 23)},
+year = {2023},
+isbn = {978-1-939133-34-2},
+address = {Boston, MA},
+pages = {553--571},
+url = {https://www.usenix.org/conference/osdi23/presentation/luo},
+publisher = {USENIX Association},
+month = jul
+}
+
+@inproceedings{rfp2,
+author = {Su, Maomeng and Zhang, Mingxing and Chen, Kang and Guo, Zhenyu and Wu, Yongwei},
+title = {RFP: When RPC is Faster than Server-Bypass with RDMA},
+year = {2017},
+isbn = {9781450349383},
+publisher = {Association for Computing Machinery},
+address = {New York, NY, USA},
+url = {https://doi.org/10.1145/3064176.3064189},
+doi = {10.1145/3064176.3064189},
+abstract = {Remote Direct Memory Access (RDMA) has been widely deployed in modern data centers. However, existing usages of RDMA lead to a dilemma between performance and redesign cost. They either directly replace socket-based send/receive primitives with the corresponding RDMA counterpart (server-reply), which only achieves moderate performance improvement; or push performance further by using one-sided RDMA operations to totally bypass the server (server-bypass), at the cost of redesigning the software.In this paper, we introduce two interesting observations about RDMA. First, RDMA has asymmetric performance characteristics, which can be used to improve server-reply's performance. Second, the performance of server-bypass is not as good as expected in many cases, because more rounds of RDMA may be needed if the server is totally bypassed. We therefore introduce a new RDMA paradigm called Remote Fetching Paradigm (RFP). Although RFP requires users to set several parameters to achieve the best performance, it supports the legacy RPC interfaces and hence avoids the need of redesigning application-specific data structures. Moreover, with proper parameters, it can achieve even higher IOPS than that of the previous paradigms.We have designed and implemented an in-memory key-value store based on RFP to evaluate its effectiveness. Experimental results show that RFP improves performance by 1.6\texttimes{}~4\texttimes{} compared with both server-reply and server-bypass paradigms.},
+booktitle = {Proceedings of the Twelfth European Conference on Computer Systems},
+pages = {1–15},
+numpages = {15},
+location = {Belgrade, Serbia},
+series = {EuroSys '17}
+}
+

@@ -1,4 +1,4 @@
-\begin{algorithm}[t]
+\begin{algorithm}[H] % [H]: printed in place inside the Notes
 \small
 \caption{Leader-to-Leader Migration of Group $G_i$}
 \label{alg:leader-to-leader}
@@ -7,8 +7,8 @@
 
   \phasesep{Intra-donor: prepare}
 
-  \State \fn{Raft\_Append}($G_i$\_START)
-  \State \fn{Raft\_Commit}()
+  \State \fn{Log\_Append}(\msg{start}($G_i$))
+  \State \fn{Log\_Commit}()
 
   \State $B_s \leftarrow$ \fn{Allocator.Get\_Blocks}($G_i$.slots)
   \For{\textbf{each} slot \textbf{in} $G_i$.slots}
@@ -30,8 +30,8 @@
   \phasesep{Commit}
 
   \State \fn{Wait}($L_r$, \msg{g\_i\_done}($G_i$))
-  \State \fn{Raft\_Append}($G_i$\_DONE)
-  \State \fn{Raft\_Commit}()
+  \State \fn{Log\_Append}(\msg{done}($G_i$))
+  \State \fn{Log\_Commit}()
 
 \EndProcedure
 \end{algorithmic}

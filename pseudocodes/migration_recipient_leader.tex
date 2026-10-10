@@ -1,4 +1,4 @@
-\begin{algorithm}[t]
+\begin{algorithm}[H] % [H]: printed in place inside the Notes
 \small
 \caption{Recipient Leader -- Handling Migrated Data}
 \label{alg:recipient-leader}
@@ -8,7 +8,7 @@
   \State buffers $\leftarrow$ \fn{Allocate\_Buffers}($G_i$, metadata)
   \State \fn{Register\_RDMA}(buffers)
   \State \fn{Store\_Metadata}($G_i$, metadata, buffers)
-  \State \fn{Send\_RPC}(donor\_leader, \msg{prepare\_ok}($G_i$))
+  \State \fn{Send\_RPC}(donor\_leader, \msg{prepare\_ok}($G_i$, meta(buffers))) \Comment{addrs + rkeys}
 \EndUpon
 
 \Statex
@@ -17,7 +17,7 @@
 
   \phasesep{Intra-recipient: replication}
 
-  \State $\texttt{RDMA\_RECEIVED}[\texttt{self}][G_i] \leftarrow \texttt{true}$
+  \State $\texttt{TRANSFERRED}[\texttt{self}][G_i] \leftarrow \texttt{true}$
   \State alive\_replicas $\leftarrow [\,]$
   \For{\textbf{each} replica $r$ \textbf{in} \fn{Replica\_Set}($G_i$)}
     \If{\fn{Check\_Alive}($r$)}
@@ -25,24 +25,25 @@
     \EndIf
   \EndFor
   \State chain $\leftarrow$ \fn{Build\_Chain}(alive\_replicas)
-  \State \fn{Replicate\_To}($r$, $G_i$)
+  \State \fn{Async\_Replicate\_To}(chain, $G_i$) \Comment{chain-forward}
+  \State \fn{Execute\_Update\_Index}($G_i$) \Comment{in parallel}
 
-  \phasesep{Majority wait \& index update}
+  \phasesep{Majority wait \& INDEX\_UPDATE}
 
-  \State \textbf{wait until} majority of $\texttt{RDMA\_RECEIVED}[R_i][G_i] = \texttt{true}$
-  \State \fn{Raft\_Append\_Log}($G_i$\_INDEX\_UPDATE)
-  \State \fn{Raft\_Commit}()
-  \State \fn{Execute\_Update\_Index}($G_i$)
+  \State \textbf{wait until} majority of $\texttt{TRANSFERRED}[R_i][G_i] = \texttt{true}$
+  \Statex \hspace{\algorithmicindent}\hspace{\algorithmicindent} \textbf{and} local index update of $G_i$ is done
+  \State \fn{Log\_Append}(\msg{index\_update}($G_i$))
+  \State \fn{Log\_Commit}()
 
   \Statex
-  \State \fn{Send\_RPC}(donor\_leader, \msg{g\_i\_done}($G_i$))
+  \State \fn{Send\_RPC}(donor\_leader, \msg{g\_i\_done}($G_i$)) \Comment{until acked}
 \EndUpon
 
 \Statex
 
-\Upon{\fn{Append\_Entries}(entry) \textbf{from} $R_i$}
+\Upon{\fn{Log\_Replication\_Reply}(entry) \textbf{from} $R_i$}
   \If{entry.metadata $= \msg{rdma\_done}(\texttt{txn\_id}, G_i)$}
-    \State $\texttt{RDMA\_RECEIVED}[R_i][G_i] \leftarrow \texttt{true}$
+    \State $\texttt{TRANSFERRED}[R_i][G_i] \leftarrow \texttt{true}$
   \EndIf
   \State \fn{Append\_To\_Log}(entry)
   \State \fn{Reply\_Success}()

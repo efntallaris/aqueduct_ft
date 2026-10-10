@@ -1,0 +1,129 @@
+% Fig. 1 -- migration of one group.
+% Laid out on a 252-unit-wide grid; the x unit is \columnwidth/252, so the
+% figure spans exactly one column in any template, while text and y
+% distances stay in pt (labels print at 7.5pt). \input it directly.
+% y grows downwards; x positions of the six lifelines are defined below.
+\begin{tikzpicture}[x={\columnwidth/252},y=-1pt,
+    font=\fontsize{7.5}{9}\fontfamily{phv}\selectfont,
+    >={Stealth[length=4pt,width=3.2pt]},
+    lifeline/.style={draw=lifegray,line width=0.8pt},
+    shard/.style={draw=ink,line width=0.6pt,fill=white,rounded corners=1.5pt,
+                  minimum width=24pt,minimum height=12pt,inner sep=0pt},
+    leader/.style={shard,fill=ink,text=white,font=\fontsize{7.5}{9}\fontfamily{phv}\bfseries},
+    msg/.style={->,draw=ink,line width=0.6pt},
+    bulk/.style={->,draw=ink,line width=1.8pt,>={Stealth[length=5pt,width=5pt]}},
+    notify/.style={->,draw=ink,line width=0.6pt,dash pattern=on 2.2pt off 1.4pt},
+    lbl/.style={inner sep=1pt,text=ink},
+    phase/.style={rounded corners=2pt},
+    phaselbl/.style={anchor=north west,inner sep=1.5pt,outer sep=0pt,
+                     font=\fontsize{7.5}{9}\fontfamily{phv}\bfseries},
+  ]
+  \definecolor{ink}{RGB}{34,34,34}
+  \definecolor{lifegray}{RGB}{165,165,165}
+  \definecolor{llfill}{gray}{0.93}  % leader-to-leader phase
+  \definecolor{llink}{gray}{0.13}
+  \definecolor{irfill}{gray}{0.86}  % intra-recipient phase
+  \definecolor{irink}{gray}{0.13}
+  % crash point: a small x on a lifeline, with its label (C1-C4) beside it
+  \def\crashat#1#2#3#4{% x, y, label anchor (east/west), label
+    \draw[ink,line width=1.2pt,line cap=round] (#1-3.2,#2-3.2) -- (#1+3.2,#2+3.2) (#1-3.2,#2+3.2) -- (#1+3.2,#2-3.2);
+    \ifx#3e\node[anchor=east,inner sep=0pt,font=\fontsize{6.6}{7}\fontfamily{phv}\bfseries] at (#1-5,#2) {#4};
+    \else\node[anchor=west,inner sep=0pt,font=\fontsize{6.6}{7}\fontfamily{phv}\bfseries] at (#1+5,#2) {#4};\fi}
+  \def\Gi{\textit{G}\textsubscript{\textit{i}}}
+  \def\us{{\fontencoding{T1}\selectfont\_}}% thin underscore glyph
+  % step badge sized for the 7.5pt figure text, centred on its capitals
+  \def\fstep#1{\tikz[baseline={([yshift=-2.7pt]s.center)}]\node[circle,fill=ink,text=white,inner sep=0pt,minimum size=9.6pt,text height=5.1pt,text depth=0.7pt,font=\fontsize{7.2}{7.2}\fontfamily{phv}\bfseries\selectfont](s){\ifnum#1=1 \kern0.84pt\fi#1};}
+
+  % lifeline x positions
+  \def\Ao{22}  \def\At{62}  \def\Ah{104}  % donor: A1, A2, A3 (leader)
+  \def\Bo{150} \def\Bt{193} \def\Bh{232}  % recipient: B1 (leader), B2, B3
+  \def\bottom{340}
+
+  % phase backgrounds
+  \fill[phase,llfill] (0,61) rectangle (252,146);
+  \fill[phase,irfill] (0,151) rectangle (252,265);
+  \fill[phase,irfill] (0,285) rectangle (252,333);  % asynchronous replication
+
+  % lifelines
+  \foreach \x in {\Ao,\At,\Ah,\Bo,\Bt,\Bh} \draw[lifeline] (\x,33) -- (\x,\bottom);
+
+  % replica groups and shards
+  \node[font=\fontsize{7.5}{9}\fontfamily{phv}\bfseries,anchor=base] at (\At,6) {Donor shard group};
+  \node[font=\fontsize{7.5}{9}\fontfamily{phv}\bfseries,anchor=base] at (\Bt,6) {Recipient shard group};
+  \draw[ink,line width=0.5pt] (\Ao-12,15) -- ++(0,-3) -- (\Ah+14,12) -- ++(0,3);
+  \draw[ink,line width=0.5pt] (\Bo-14,15) -- ++(0,-3) -- (\Bh+12,12) -- ++(0,3);
+  \node[shard]  at (\Ao,27) {A1};
+  \node[shard]  at (\At,27) {A2};
+  \node[leader] at (\Ah,27) {A3};
+  \node[leader] at (\Bo,27) {B1};
+  \node[shard]  at (\Bt,27) {B2};
+  \node[shard]  at (\Bh,27) {B3};
+  \node[lbl,fill=white,font=\fontsize{7}{8}\fontfamily{phv}\itshape] at (\Ah,41) {leader};
+  \node[lbl,fill=white,font=\fontsize{7}{8}\fontfamily{phv}\itshape] at (\Bo,41) {leader};
+
+  % START(G_i): donor leader logs the migration intent before the transfer
+  \node[lbl,above=2pt,fill=white] at ({(\Ao+\Ah)/2},54) {\fstep{1}\hspace{2pt}START(\Gi)};
+  \draw[notify] (\Ah,54) -- (\Ao,54);
+  \draw[notify] (\Ah,54) -- (\At,54);
+
+  % phase 1: leader-to-leader
+  \node[phaselbl,text=llink,fill=llfill] at (2,63) {Leader-to-leader};
+  \draw[msg]  (\Ah,82) -- node[lbl,above=2pt] {\fstep{2}\hspace{2pt}prepare}  (\Bo,82);
+  % recipient leader logs TXN_START(G_i) before replying (keeps tombstones for G_i)
+  \node[lbl,above=2pt,fill=llfill] at ({(\Bo+\Bh)/2},95) {TXN\us START(\Gi)};
+  \draw[notify] (\Bo,95) -- (\Bt,95);
+  \draw[notify] (\Bo,95) -- (\Bh,95);
+  \draw[msg]  (\Bo,108) -- node[lbl,above=2pt] {MRs}      (\Ah,108);
+  \draw[bulk] (\Ah,123) -- node[lbl,above=2pt] {\fstep{3}\hspace{2pt}transfer} (\Bo,123);
+  \draw[msg]  (\Ah,136) -- node[lbl,above=2pt,fill=llfill,font=\fontsize{6.6}{7}\fontfamily{phv}\selectfont,inner sep=0.6pt] {RDMA\us DONE}     (\Bo,136);
+  \draw[msg]  (\Bo,141) -- (\Ah,141);
+
+  % phase 2: intra-recipient chain replication B1 -> B2 -> B3,
+  % with B1's local index update (IU) running in parallel
+  \node[phaselbl,text=irink,fill=irfill] at (2,153) {Intra-recipient};
+  \draw[msg,rounded corners=2pt] (\Bo,162.5) -- ++(12,0) -- ++(0,9) -- (\Bo,171.5);
+  \node[lbl,right=3pt,fill=irfill] at (\Bo+12,167) {\fstep{4}\hspace{2pt}ack B1 (1/3)};
+  \draw[bulk] (\Bo,193) -- node[lbl,above=2pt,align=center,font=\fontsize{7.5}{8}\fontfamily{phv}\selectfont] {chain\\replication} (\Bt,193);
+  \draw[msg]  (\Bo,207) -- node[lbl,above=2pt,fill=irfill,font=\fontsize{6.6}{7}\fontfamily{phv}\selectfont,inner sep=0.6pt] {CHAIN\us DONE}     (\Bt,207);
+  \draw[msg]  (\Bt,212) -- (\Bo,212);
+  \draw[msg]  (\Bt,227) -- node[lbl,above=2pt,fill=irfill] {ack B2 (2/3)} (\Bo,227);
+  \draw[ink,line width=0.6pt,decorate,decoration={brace,amplitude=4pt}]
+    (\Bo-7,231) -- node[lbl,left=5pt,align=center] {IU\\(\S\ref{sec:index_updating})} (\Bo-7,158);
+
+  % majority reached: the migrated data is durable in the recipient group
+  \draw[irink,line width=1pt] (\Bo,241) -- (\Bh,241)
+    node[midway,lbl,inner sep=2pt,fill=irfill,text=irink,
+         font=\fontsize{7.5}{9}\fontfamily{phv}\bfseries] {majority reached};
+  \node[inner sep=0pt,anchor=east] at (\Bo-3,241) {\fstep{5}};
+  \node[lbl,above=2pt,fill=irfill] at ({(\Bo+\Bh)/2},259) {\fstep{6}\hspace{2pt}INDEX\us UPDATE};
+  \draw[notify] (\Bo,259) -- (\Bt,259);
+  \draw[notify] (\Bo,259) -- (\Bh,259);
+
+  % DONE(G_i): right after INDEX_UPDATE commits, the recipient leader reports
+  % completion and the donor leader logs it
+  \node[lbl,above=2pt,fill=white] at ({(\Ao+\Ah)/2},279) {\fstep{7}\hspace{2pt}DONE(\Gi)};
+  \draw[msg] (\Bo,279) -- (\Ah,279);
+  \draw[notify] (\Ah,279) -- (\Ao,279);
+  \draw[notify] (\Ah,279) -- (\At,279);
+
+  % the remaining replica receives the data after the majority, asynchronously
+  \node[phaselbl,text=irink,fill=irfill] at (2,287) {Intra-recipient (slow path)};
+  \draw[bulk] (\Bt,308) -- node[lbl,above=2pt,align=center,font=\fontsize{7.5}{8}\fontfamily{phv}\selectfont] {chain\\replication}  (\Bh,308);
+  \draw[msg]  (\Bt,322) -- node[lbl,above=2pt,fill=irfill,font=\fontsize{6.6}{7}\fontfamily{phv}\selectfont,inner sep=0.6pt] {CHAIN\us DONE}     (\Bh,322);
+  \draw[msg]  (\Bh,327) -- (\Bt,327);
+
+  % crash points used by the fault-injection tests
+  % \crashat{\Ah}{67}{e}{C1}   % donor leader, after START, before the transfer
+  % \crashat{\Bo}{146}{w}{C2}  % recipient leader, holds the data, before replicating it
+  % \crashat{\Bt}{180}{w}{C3}  % chain follower (B2), during chain replication
+  % \crashat{\Bo}{287}{w}{C4}  % recipient leader, after INDEX_UPDATE, before DONE
+
+  % legend: one centred row, equal gaps, arrows at mid x-height of the text
+  \def\key#1{\tikz[baseline=-2.7pt]\draw[#1] (0pt,0pt) -- (18pt,0pt);\hspace{4pt}}
+  \node[inner sep=0pt,anchor=base] at (126,356) {%
+    \key{msg}RPC\hspace{16pt}%
+    \key{notify}Replicated log entry\hspace{16pt}%
+    \key{bulk}RDMA write};
+    % crash-point legend entry, commented out with the C1-C4 markers:
+    % \hspace{10pt}\tikz[baseline=-2.7pt]{\draw[ink,line width=1.2pt,line cap=round] (-2.6pt,-2.6pt) -- (2.6pt,2.6pt) (-2.6pt,2.6pt) -- (2.6pt,-2.6pt);}\hspace{4pt}Crash point
+\end{tikzpicture}%

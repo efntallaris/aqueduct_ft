@@ -1,37 +1,97 @@
 %-------------------------------------------------------------------------------
 
-\section{Achieving efficient elasticity}
+\section{Design of SAMM}
 \label{sec:design}
-
-\subsection{In-memory data organization to enable fast data transfers}
 \label{sec:data_organization}
+\label{sec:samm}
+
+\subsection{Architecture Overview}
+\label{sec:samm-arch}
+
+SAMM is a semantic overlay allocator. It interposes a slot-aware region-management layer between the application and a commodity allocator (e.g., jemalloc~\cite{jemalloc}), without replacing it. The architecture is hierarchical, as shown in Figure~\ref{fig:samm-arch}.
+
+% Figs. 1 and 2 sit side by side at the top of a page: give both the same height
+% so that their captions start on the same line.
+\newsavebox{\sammArchBox}\sbox{\sammArchBox}{\input{figs/samm_arch.tex}}
+\newsavebox{\sammLayoutBox}\sbox{\sammLayoutBox}{\resizebox{0.8\columnwidth}{!}{\input{figs/samm.tex}}}
+\newlength{\sammFigH}\setlength{\sammFigH}{\dimexpr\ht\sammLayoutBox+\dp\sammLayoutBox\relax}
 
 \begin{figure}[t]
-	\centering
-	\includegraphics[width=\columnwidth]{figs/1.pdf}
-	\caption{\OurImplementation{} baseline migration protocol}
-	\label{fig:migration_flow}
+  \centering
+  \parbox[c][\sammFigH][c]{\columnwidth}{\centering\usebox{\sammArchBox}}
+  \caption{SAMM four-layer architecture. Jemalloc provides coarse-grained blocks. SAMM enforces slot ownership and manages intra-block segments.}
+  \label{fig:samm-arch}
 \end{figure}
 
+At the lowest layer, jemalloc supplies large aligned memory blocks. SAMM acquires these blocks, tags each one with a slot owner, and registers it in a central slot table. No block is ever shared between two slots. Within each block, SAMM manages variable-sized segments, one per key-value pair. Allocation, deallocation, and segment reuse are governed by a per-slot free list that threads across all blocks belonging to that slot.
 
+\subsection{Memory Layout}
+\label{sec:samm-layout}
+\label{sec:samm-blocks}
+\label{sec:samm-block-layout}
+\label{sec:samm-segments}
 
-Key-value stores (KVSs) typically organize data in logical partitions called {\em shards}, {\em slots}, or {\em tokens} in different systems~\cite{mongodb,redis-pure,cassandra-paper}.
-This in-memory data organization does not necessarily align with the logical organization of data (i.e., slots), leading to data of the same slot being scattered across different memory locations.
-In this paper, we uniformly refer to them as \emph{slots}, regardless of the underlying system.
+\begin{figure}[t]
+  \centering
+  \parbox[c][\sammFigH][c]{\columnwidth}{\centering\usebox{\sammLayoutBox}}
+  \caption{SAMM memory layout. Each slot owns a doubly linked list of blocks, and each block holds variable-size segments of that slot only, between a prologue and an epilogue. Free segments of a slot form one free list that can span its blocks.}
+  \label{fig:samm}
+\end{figure}
 
-To address this, \OurImplementation{} features a memory allocator that ensures in-memory layouts mirror the logical slot structure, aiming for bulk-transfer-oriented (RDMA-friendly) network transfers.
-Its unique characteristic is that it maps key-value pairs belonging to the same slot to contiguous fixed-size physical memory regions ({\em blocks}).
-Records in the same slot are packed across one or more blocks. When a block becomes full, a new one is allocated to continue storing the slot’s data.
-Each memory allocation request is tagged with its associated slot, allowing the allocator to co-locate key-value pairs belonging to the same slot.
+\paragraph{Slot table.}
+The slot table is a flat array indexed by slot identifier. Each entry represents one keyspace partition and tracks:
+% //Figure of slot-table with blocks etc.
 
-During the migration process, when a node offloads certain slots to another node, it requests a list of memory blocks associated with those slots, each block to be transferred in a separate RDMA operation descriptor.
-This slot-aware memory organization substantially reduces the number of such descriptors (i.e., shorter gather lists composed of larger buffers), leading to significantly improved RDMA performance.
-Furthermore, communicating through fewer, larger memory regions (MRs) optimizes memory \emph{registration} overhead\footnote{RDMA operations require that memory regions (MRs) be {\em registered} with RNICs, assigning them Remote Keys (RKeys) used in remote access}.
-RNICs may also more efficiently manage memory resources when buffers are contiguous, allowing for more efficient use of their memory management resources.
+The slot table entry is the sole authoritative index of a slot's memory footprint. During slot migration, SAMM traverses the block list starting at head and emits each block's body as a contiguous byte range. No scatter-gather over the global heap is required.
 
+\paragraph{Block layout.}
+A block is a fixed-size, contiguous memory block obtained from jemalloc (e.g., 2\,MB, aligned to a hugepage boundary). Each block is exclusively owned by one slot. Rather than a slotted-page directory, SAMM structures each block with a prologue and an epilogue---fixed-size metadata blocks at the low and high ends of the block respectively. The body between them holds a dense, append-style sequence of variable-sized segments (Fig.~\ref{fig:samm}).
 
-\subsection{Applicability and design goals}
+\paragraph{Segment layout.}
+A segment is the atomic unit of storage for a single key-value pair. Segments are variable-sized. Each segment is exactly large enough to hold the fixed-size header plus the key and value payloads, with no wasted padding beyond alignment. The segment format is:
+% // maybe add some details (?)
+
+The free list is implemented as an intrusive linked list that overlays the first 8 bytes of the payload region. When \texttt{FLAG\_FREE} is set, those bytes are reinterpreted as a \texttt{next\_free} pointer chaining this segment to the next free segment in the slot's free list, which may reside in any of the slot's blocks without any auxiliary data structure.
+
+On allocation, SAMM returns to the caller a direct pointer to the first byte of the payload region immediately following the segment header. The caller writes the key and value directly into the block at that address, incurring no intermediate copy.
+
+When SAMM needs a new block for a slot, it invokes the arena's alloc hook, receiving a hugepage-aligned region that it then initialises with a prologue and epilogue before linking it to the slot's block list. When a slot's block becomes empty (all segments freed), SAMM unlinks it from the doubly-linked list and returns it to jemalloc via the dalloc hook. This delegation avoids reimplementing OS-level concerns such as NUMA-aware placement, transparent hugepage promotion, and background purging.
+
+%-------------------------------------------------------------------------------
+\section{Fault-tolerant migration protocol}
+\label{sec:protocol}
+
+% Table 1 and Fig. 3 are defined here, before the protocol text, so that they
+% share the top of the next page (one per column).
+\begin{table}[t]
+  \centering
+  \footnotesize
+  \renewcommand{\arraystretch}{1.2}
+  \setlength{\tabcolsep}{4pt}
+  \begin{tabular*}{\columnwidth}{@{}l@{\extracolsep{\fill}}cl@{}}
+    \toprule
+    \multicolumn{1}{c}{\textbf{Entry}} & \textbf{Log} & \multicolumn{1}{c}{\textbf{Use}} \\
+    \midrule
+    \texttt{START($G_i$)}         & donor     & resume $G_i$ after a crash \\
+    \texttt{TXN\_START($G_i$)}    & recipient & keep tombstones for $G_i$ \\
+    \texttt{INDEX\_UPDATE($G_i$)} & recipient & stop double reads for $G_i$ \\
+    \texttt{DONE($G_i$)}          & donor     & skip $G_i$ on recovery \\
+    \bottomrule
+  \end{tabular*}
+  \caption{Replicated-log entries of group $G_i$.}
+  \label{tab:log-entries}
+\end{table}
+
+\begin{figure}[t]
+  \centering
+  \input{figs/1.tex}
+  \caption{Fast path of the migration of one group $G_i$.}% C1--C4 mark the points where the fault-injection tests crash a node.
+  \label{fig:migration_flow}
+\end{figure}
+
+\subsection{Failure model}
 \label{sec:applicability}
+\label{sec:fault-model}
 
 % \OurImplementation{}'s fault-tolerant migration algorithm targets a broad class of distributed, shared-nothing in-memory key-value stores. 
 % These systems (i) partition the key space into logical units such as shards or slots, (ii) replicate each partition across a small replication group using a leader-based consensus protocol (e.g., Raft) with synchronous writes, and (iii) operate under a fail-stop failure model where nodes may crash and later rejoin. 
@@ -43,166 +103,18 @@ RNICs may also more efficiently manage memory resources when buffers are contigu
 % Third, \emph{incremental elasticity}: group-based, pipelined migration allows newly migrated slots to become usable at the recipient as soon as their transfer and index updates complete, instead of waiting for the entire migration transaction to finish. 
 % The fault-tolerant migration protocol described in the following sections instantiates these principles in a replicated KVS that uses Raft for consistency.
 
+\OurImplementation{}'s fault-tolerant migration protocol targets in-memory key-value stores.
+We consider a KVS that (i) partitions the key space into logical units such as shards or slots, (ii) replicates each partition across a set of replicas using a leader-based replication protocol~\cite{raft,paxos-simple,chain-replication} with synchronous writes, and (iii) runs on replicas that fail by crashing (\textcolor{blue}{\emph{fail-stop}}).
 
-\OurImplementation{}'s fault-tolerant migration algorithm targets in-memory key-value stores. 
-We assume that the KVS (i) partition the key space into logical units such as shards or slots, (ii) replicate each partition across a replication group using a leader-based replication protocol (e.g., Raft) with synchronous writes, and (iii) operate under a crash-recovery failure model where nodes may crash and later rejoin using persisted state. 
+We call the replicas of a partition a \emph{shard group}. One replica acts as the leader and the others as followers. The leader appends writes and other commands to the group's \emph{replicated log}, and an entry is committed only after it has been durably stored by a majority of the shard group.
+A crashed replica loses its in-memory state. It may later rejoin its shard group as a new member and obtain its state from the other replicas through the replication protocol.
+Failed replicas are eventually detected by the others, e.g., through timeouts or broken connections.
+At most $f$ of the $2f+1$ replicas of each shard group fail. Every committed update, and the data that is being migrated, therefore survives on at least one replica.
 
-Overall \OurImplementation{}'s fault-tolerant migration protocol described in the following sections assumes a replicated KVS that uses Raft for consistency.
-
-
-\subsection{Fault Model}
-\label{sec:fault-model}
-\OurImplementation{} operates under a \emph{crash-recovery} failure model.
-Nodes may crash at any point and later restart, recovering their state from the persisted Raft log and catching up with the rest of the group through standard Raft mechanisms.
-
-The system employs synchronous replication for write operations using the Raft consensus protocol.
-Data is organized into fixed-size replication groups, each consisting of a leader and a set of followers.
-A write is considered committed only after it has been durably replicated to a majority of the nodes in its replication group.
-
-\OurImplementation{} assumes that a majority of replicas holding committed data remain available in each replication group.
-Under this assumption, the system guarantees durability and consistency of committed updates.
-If a majority of replicas in a replication group are simultaneously unavailable, the group stalls until sufficiently many nodes recover.
-
-Elasticity operations contain two replication groups. A \emph{donor} group that currently owns the data being migrated, and a \emph{recipient} group that will assume ownership.
+An elasticity operation involves two shard groups, a \emph{donor} shard group that currently owns the data being migrated, and a \emph{recipient} shard group that will assume ownership.
 Migration proceeds concurrently with client requests.
-The migration protocol tolerates crashes according to the Raft failure model and guarantees that no committed data is lost as long as the above majority assumption holds.
 
-In case of a crash, instead of rolling back a partially completed migration transaction, the protocol always moves forward. Once a group participates in a migration it will eventually be transferred to its recipient group, along with all other groups in the transaction.
-A node that recovers mid-migration replays its Raft log to reconstruct progress. If a recipient replica recovers and does not have the migrated data, it requests it from the recipient leader or, if unavailable, from the donor replica group.
-
-
-\subsection{Fault Tolerant Migration protocol}
-\label{sec:migration-protocol}
-
-The migration protocol is designed to operate concurrently with client requests and relies on Raft for coordination of source and reciepient,
-and one-sided RDMA for efficient bulk data transfer.
-Data migrations in \OurImplementation{} are managed by the \emph{Migration Manager (MM)} module, which orchestrates the entire migration process on the source and destination nodes.
-The MM ensures seamless data transfer and coordinates the ownership handover upon successful migration.
-The migration process involves both the transfers of data and its integration into the destination node’s active dataset.
-
-During migration, there are two replica groups involved.
-the \emph{donor} (source) group, which holds the data to be migrated, and the \emph{recipient} (destination) group,
-which will receive and integrate the migrated data. Each group has a leader and followers. The leader coordinates the migration process within its group.
-
-At first, the protocol should transfer the data from the source to the destination (leader-to-leader) and ensure the migrating data can tolerate crashes before stoping the double reads.
-Before stopping the double reads and disconnecting the source replica group for that group, the destination replica group should transfer the data to a majority of replicas (leader-to-replica)
-and integrate the received data into leader recipient recplica’s active dataset via index updates (Section~\ref{sec:index_updating}).
-Leader-to-replica on the destination replica group, have two paths. The fast path which the majority of the replicas have received the migrating data. This path must finish before stopping the double reads to ensure that the data is available on a majority of replicas.
-The slow path which the minority of the replicas have not received the data. This can happen asynchronously and can complete after stopping the double reads.
-At some point all nodes will eventually receive the migrated data from either the fast path or the slow path.
-% Then, the destination integrates the received data into its active dataset via index updates (Section~\ref{sec:index_updating}).
-Fig.~\ref{fig:migration_flow} provides an overview of \OurImplementation{}’s migration process.
-Migration is initiated by a coordinator $C$, which instructs target source replica leader to start a transaction and migrate a set of slots to a destination replica leader $D$.
-The protocol proceeds in subtransactions ($G_i$), each corresponding to a subset of the total slots.
-The following sections describe each phase of the protocol in detail, organized by the communication pattern: intra-donor operations (Section~\ref{sec:intra-donor}), leader-to-leader transfer (Section~\ref{sec:leader-to-leader}), and intra-recipient operations (Section~\ref{sec:intra-recipient}).
-After all groups complete, a transaction is considered complete and can safely cleanup the transaction state.
-
-\subsection{Migration Phases}
-\label{sec:migration-phases}
-
-\subsubsection{Intra-donor operations}
-\label{sec:intra-donor}
-
-The migration of a slot group $G_i$ begins with the donor replication group preparing the data for transfer.
-The migration manager on the donor leader initiates the migration of group $G_i$ by entering a prepare phase.
-During this phase, the donor leader identifies the memory blocks associated with the slots in $G_i$ and exposes them as RDMA-accessible memory regions.
-The donor disseminates the corresponding buffer metadata, including memory addresses, sizes, and RDMA access keys, to the recipient group through a reliable control path.
-This phase establishes all necessary state for bulk data transfer without moving any data.
-
-Before starting the transfer, the donor leader appends a \texttt{$G_i$\_START} entry to the Raft log and commits it, making the migration intent durable.
-After the recipient confirms that $G_i$ has been fully replicated (Section~\ref{sec:intra-recipient}), the donor appends and commits a \texttt{$G_i$\_DONE} entry, marking the group as complete.
-These two entries allow a recovering donor leader to determine which groups are in-flight and which have finished (Algorithm~\ref{alg:donor-recovery}).
-
-\newtext{On the recipient side, a \texttt{txn\_start($G_i$)} entry must be committed in its Raft log before processing any client operations for the migrating group.
-This is necessary so that replicas know to maintain tombstones for deleted keys, which would otherwise be resurrected during index updates (Section~\ref{sec:index_updating}).}
-
-\subsubsection{Leader-to-leader transfer}
-\label{sec:leader-to-leader}
-
-Once preparation completes, the donor leader performs one-sided RDMA \texttt{WRITE} operations to transfer the data of group $G_i$ directly into pre-allocated memory on the recipient leader.
-Data movement occurs entirely off the CPU fast path and does not require involvement of the recipient leader during transfer.
-After all RDMA operations for $G_i$ complete, the donor leader issues an explicit \texttt{RDMA\_DONE} notification to the recipient group.
-
-\subsubsection{Intra-recipient operations}
-\label{sec:intra-recipient}
-
-Upon receiving the transferred data, the recipient leader propagates the migrated state to the replicas in its replication group.
-\newtext{Data is propagated to the replicas using a chain replication protocol over RDMA.
-The leader picks an ordering of replicas and writes to the first one; when that replica finishes, it signals \texttt{RDMA\_DONE} to the next, and so on down the chain.
-Each replica piggybacks the status of its received buffers onto its \texttt{AppendEntries} responses back to the leader.}
-
-\paragraph{Fast and slow replication paths.}
-This replication follows two paths.
-In the \emph{fast path}, the recipient leader synchronously ensures that the migrated data is durably replicated to a majority of replicas.
-This step is required before the system can safely stop serving reads from the donor group.
-In the \emph{slow path}, the remaining replicas receive the migrated data asynchronously after the group is made available for serving.
-\newtext{Replicas in the slow path either receive the data as part of the ongoing replication chain or obtain it from the leader as part of a log-sync action, when executing \texttt{AppendEntries} that include an \texttt{INDEX\_UPDATE} entry.}
-Eventually, all replicas converge to the same state.
-
-\subsubsection{Index updating}
-\label{sec:index_updating}
-
-Transferring data using RDMA enables the source node to write data directly into the target node's memory.
-However, transferring raw data alone is insufficient.
-In \OurImplementation{}, a dictionary-like data structure serves as an index, maintaining pointers to the actual key-value pairs.
-Therefore, after the data transfer completes, the dictionary is updated to reflect the new memory locations—a process referred to as the \emph{index update}.
-
-\OurImplementation{} handles index updates using dedicated background threads with lower scheduling priority to minimize interference with client-serving operations.
-Since these background threads run concurrently with client threads, multiple threads may access and update the dictionary simultaneously.
-To ensure consistency, \OurImplementation{} employs fine-grained locking for dictionary access and modification.
-
-\paragraph{Stale entry detection.}
-During migration, all new writes are directed to the destination node. Consequently, data received from the source may contain stale versions of keys. As part of the index update, \OurImplementation{} detects and discards these stale entries,
-ensuring that only the most recent values are preserved in the dictionary.
-
-\paragraph{Tombstones for deleted keys.}
-\newtext{Recipient replicas must keep tombstones for deleted keys while a migration transaction is active.
-Consider a key $K$ that is first updated and then deleted at the recipient before the index update runs.
-Without a tombstone, the index update would blindly insert the older version of $K$ from the donor, effectively resurrecting a deleted key.
-The tombstone lets the index update skip $K$.
-Once the index update for $G_i$ finishes, its tombstones can be garbage-collected.}
-
-\paragraph{INDEX\_UPDATE proposal.}
-\newtext{Once a majority of replicas have confirmed receipt of the RDMA buffers for $(txn\_id, G_i)$ through their \texttt{AppendEntries} responses, 
-the recipient leader first executes the index update locally and then proposes the \texttt{INDEX\_UPDATE($G_i$)} command via Raft.
-A replica will only accept this command if it already holds the corresponding buffers.
-If a replica has \texttt{INDEX\_UPDATE($G_i$)} in its log, it also has the data.
-So once this entry is committed, a majority hold both the data and the log entry, and any leader elected from that majority can serve the migrated data.}
-
-\subsubsection{Commit and group completion}
-\label{sec:commit-completion}
-
-After a majority of the recipient replicas acknowledge successful replication of group $G_i$, the migration of the group is considered complete.
-The donor leader records the completion of $G_i$ as a committed event via Raft, making the progress durable.
-At this point, ownership of the slots in $G_i$ is transferred to the recipient group, and the system proceeds to the next migration group.
-This design guarantees that, even in the presence of failures, at least one replica in the recipient group holds the complete migrated data.
-
-
-\subsection{Serving Client Requests During Migration}
-\label{sec:serving-during-migration}
-
-\OurImplementation{} is designed to migrate data without interrupting client-facing operations.
-% Throughout the migration process, the system continues to serve both read and write requests while preserving linearizability under the assumptions of Section~\ref{sec:system-model}.
-
-For slots that are not currently under migration, requests are handled normally by their owning replication group.
-For slots belonging to an active migration group $G_i$, request routing depends on the operation type and the migration phase.
-
-\noindent{\textbf{Writes}}
-Once migration of a group $G_i$ begins, all new write operations targeting slots in $G_i$ are redirected to the recipient replication group.
-Writes are processed through the recipient leader and synchronously replicated using Raft, ensuring that all committed updates are preserved even if failures occur during migration.
-This redirection prevents divergence between donor and recipient replicas and eliminates the need for write-back or reconciliation after migration.
-
-\noindent{\textbf{Reads}}
-Read requests targeting slots in $G_i$ may be served by either the donor or the recipient group, depending on data availability and migration progress.
-Before the completion of the fast replication path on the recipient side, reads may be served from the donor group to avoid exposing incomplete state.
-After a majority of recipient replicas have received the migrated data, reads are served exclusively by the recipient group.
-This controlled transition ensures that reads never observe partially migrated or unreplicated state.
-\newtext{Double reads for $G_i$ can stop once the recipient leader has committed \texttt{INDEX\_UPDATE($G_i$)} via Raft.
-After that, any replica that could become leader already has the data and the index update in its log, so the recipient group can serve $G_i$ on its own.}
-
-Since writes go to the recipient from the start and reads switch over only after a majority has the data, no committed update is lost and clients always see a consistent state.
-Throughout the migration, every key is served by at least one group that holds its latest version.
-
+\input{protocol.tex}
 
 % The migration process goes through the pre-migration and the data transfer phases.
 
@@ -230,17 +142,12 @@ Throughout the migration, every key is served by at least one group that holds i
 
 % Adopting read/write handling similar to Fulva, we inherit the benefits of a hybrid (source-driven and destination-driven) approaches via cooperative processing between the source and the destination nodes guarantees linearizability and zero downtime during data migration. Beyond Fulva, \OurImplementation{} achieves near–link-speed migration while imposing minimal overhead on foreground workloads (not currently possible with competitive migration approaches) with minimal impact on client workloads, as described next.
 
-
-
-
-
 % \begin{figure}[t]
 % 	\centering
 % 	\includegraphics[width=\columnwidth]{figs/tt2.pdf}
 % 	\caption{Impact of grouping on end-to-end migration time}
 % 	\label{fig:migration_groups}
 % \end{figure}
-
 
 % \subsection{Overlapping CPU and network processing}
 % \label{sec:groups-stages}
@@ -252,13 +159,11 @@ Throughout the migration, every key is served by at least one group that holds i
 
 % \OurImplementation{} improves this by splitting the transfer into finer-grained batches of slots, called \emph{Groups}, and applying the protocol iteratively (Fig.~\ref{fig:migration_groups}a–b). With \emph{G} groups, each run of the protocol migrates roughly 1/G of the slots. This allows index updates on group $i$ to overlap with data transfer of group $i+1$, reducing overall migration duration.
 
-
 % Performing multiple runs of the protocol to support grouping add the cost coordination between the source and the destination nodes in each round. This includes the cost of \emph{pre-migration} phase (steps 1-3 of the base migration protocol).
 % Pre-migration messages exchanged via RPC, while bulk slot data transfers use one-sided RDMA.
 % The setup overhead for RDMA per group is denoted $T_{\mbox{startup}}$ in Fig.~\ref{fig:migration_groups}.
 
 % Fig.~\ref{fig:migration_groups}-(a) illustrates a single-group migration, where the total elasticity duration is the sum of $T_\text{startup}$, the transfer time $T_\text{comm}(G_{i+1})$, and the index update delay $T_\text{delay}$ at the destination. Fig.~\ref{fig:migration_groups}-(b) shows a two-group migration: while each group still incurs pre-migration overhead, the index update of the first group, $T_\text{delay}(G_1)$, is overlapped with the data transfer of the second group.
-
 
 % By overlapping communication with processing, \OurImplementation{} reduces the overall duration of elasticity actions. A key assumption is that $G$ is chosen so that the data size of each group does not fall below the minimum transfer size $S_\text{min}$ required to saturate RDMA link bandwidth. 
 % % Since \OurImplementation{} ensures that each slot is typically larger than $S_\text{min}$ in high-speed RDMA networks, this assumption holds in practice (experimentally validated in Section~\ref{sec:eval_block_size}).
@@ -294,7 +199,6 @@ Throughout the migration, every key is served by at least one group that holds i
 % % (G$_{\mbox{opt}}$) can be estimated via online measurements of transfer delays (T$_{\mbox{delay}}$) and per-group indexing times over group sizes in the range \{S$_{\mbox{min}}$, total transfer size (G=1)\}, and via measurements of the quantities in Eq. (\ref{eqn:constraint}) (in Section~\ref{sec:optimal_group_size} we experimentally validate this analysis).
 
 % \textbf{Incremental Elasticity}. An additional advantage of the iterative, group-based approach is that once a group is successfully transferred, all read and write requests targeting slots of the group are solely handled by the destination alleviating the stress on the source node highlighting the benefits of incremental elasticity.%~\cite{incremental-elasticity}.
-
 
 % \subsection{Self-regulating transfers to protect clients}
 % \label{sec:throttling}

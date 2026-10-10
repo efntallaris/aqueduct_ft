@@ -1,0 +1,99 @@
+% Fig. -- slot-aware memory organization (two panels).
+% Same conventions as figs/1.tex: 252-unit grid scaled to \columnwidth,
+% y in pt growing downwards, 7.5pt Helvetica, grayscale.
+% Generated layout; edit the numbers directly or regenerate.
+\begin{tikzpicture}[x={\columnwidth/252},y=-1pt,
+    font=\fontsize{7.5}{9}\fontfamily{phv}\selectfont,
+    >={Stealth[length=3.2pt,width=2.6pt]},
+    cell/.style={draw=ink,line width=0.4pt},
+    mig/.style={cell,fill=ink!80},          % the slot being migrated
+    oth1/.style={cell,fill=ink!12},         % other slots
+    oth2/.style={cell,fill=ink!32},
+    free/.style={cell,fill=white},
+    desc/.style={draw=ink,line width=0.5pt,fill=white,rounded corners=1pt},
+    ptr/.style={->,draw=ink,line width=0.5pt},
+    link/.style={->,draw=ink!70,line width=0.4pt},
+    title/.style={anchor=base west,inner sep=0pt,font=\fontsize{7.5}{9}\fontfamily{phv}\bfseries},
+    note/.style={anchor=west,inner sep=0pt,text=ink},
+  ]
+  \definecolor{ink}{RGB}{34,34,34}
+
+  % legend, right-aligned on the first title line
+  \node[anchor=base east,inner sep=0pt] at (252,0) {%
+    \tikz[baseline=0pt]\filldraw[mig] (0,0) rectangle (6pt,6pt);\hspace{2pt}migrating slot\hspace{7pt}%
+    \tikz[baseline=0pt]\filldraw[oth1] (0,0) rectangle (6pt,6pt);\hspace{2pt}other slots};
+
+
+  % (a) scattered layout: the migrating slot is spread over many small segments
+  \node[title] at (0,0) {(a) Scattered: 5 descriptors};
+  \node[note,anchor=base west] at (0,13) {memory};
+  \filldraw[oth1] (8,16) rectangle (21.75,29);
+  \filldraw[mig] (21.75,16) rectangle (32.06,29);
+  \filldraw[oth2] (32.06,16) rectangle (49.24,29);
+  \filldraw[oth1] (49.24,16) rectangle (64.14,29);
+  \filldraw[mig] (64.14,16) rectangle (72.16,29);
+  \filldraw[oth1] (72.16,16) rectangle (83.61,29);
+  \filldraw[oth2] (83.61,16) rectangle (97.36,29);
+  \filldraw[mig] (97.36,16) rectangle (109.96,29);
+  \filldraw[oth1] (109.96,16) rectangle (128.29,29);
+  \filldraw[oth2] (128.29,16) rectangle (138.6,29);
+  \filldraw[oth1] (138.6,16) rectangle (152.35,29);
+  \filldraw[mig] (152.35,16) rectangle (161.51,29);
+  \filldraw[oth2] (161.51,16) rectangle (177.55,29);
+  \filldraw[oth1] (177.55,16) rectangle (189.01,29);
+  \filldraw[oth2] (189.01,16) rectangle (201.61,29);
+  \filldraw[mig] (201.61,16) rectangle (213.07,29);
+  \filldraw[oth1] (213.07,16) rectangle (227.96,29);
+  \filldraw[oth2] (227.96,16) rectangle (244,29);
+  \filldraw[desc] (18.9,46) rectangle (34.9,55);
+  \filldraw[desc] (60.15,46) rectangle (76.15,55);
+  \filldraw[desc] (95.66,46) rectangle (111.66,55);
+  \filldraw[desc] (148.93,46) rectangle (164.93,55);
+  \filldraw[desc] (199.34,46) rectangle (215.34,55);
+  \draw[link] (34.9,50.5) -- (60.15,50.5);
+  \draw[link] (76.15,50.5) -- (95.66,50.5);
+  \draw[link] (111.66,50.5) -- (148.93,50.5);
+  \draw[link] (164.93,50.5) -- (199.34,50.5);
+  \draw[ptr] (26.9,46) -- (26.9,33);
+  \draw[ptr] (68.15,46) -- (68.15,33);
+  \draw[ptr] (103.66,46) -- (103.66,33);
+  \draw[ptr] (156.93,46) -- (156.93,33);
+  \draw[ptr] (207.34,46) -- (207.34,33);
+
+  % (b) slot-aware layout: the slot is packed into contiguous fixed-size blocks
+  \node[title] at (0,80) {(b) Slot-aware: 2 descriptors};
+  \node[note,anchor=base west] at (0,93) {memory};
+  \draw[cell] (8,96) rectangle (44,109);
+  \filldraw[oth1] (8,96) rectangle (44,109);
+  \draw[ink!55,line width=0.4pt] (15.2,97.5) -- (15.2,107.5);
+  \draw[ink!55,line width=0.4pt] (22.4,97.5) -- (22.4,107.5);
+  \draw[ink!55,line width=0.4pt] (29.6,97.5) -- (29.6,107.5);
+  \draw[ink!55,line width=0.4pt] (36.8,97.5) -- (36.8,107.5);
+  \draw[cell] (48,96) rectangle (84,109);
+  \filldraw[oth1] (48,96) rectangle (73.2,109);
+  \draw[ink!55,line width=0.4pt] (56.4,97.5) -- (56.4,107.5);
+  \draw[ink!55,line width=0.4pt] (64.8,97.5) -- (64.8,107.5);
+  \draw[cell] (88,96) rectangle (124,109);
+  \filldraw[mig] (88,96) rectangle (124,109);
+  \draw[white,line width=0.4pt] (95.2,97.5) -- (95.2,107.5);
+  \draw[white,line width=0.4pt] (102.4,97.5) -- (102.4,107.5);
+  \draw[white,line width=0.4pt] (109.6,97.5) -- (109.6,107.5);
+  \draw[white,line width=0.4pt] (116.8,97.5) -- (116.8,107.5);
+  \draw[cell] (128,96) rectangle (164,109);
+  \filldraw[mig] (128,96) rectangle (149.6,109);
+  \draw[white,line width=0.4pt] (135.2,97.5) -- (135.2,107.5);
+  \draw[white,line width=0.4pt] (142.4,97.5) -- (142.4,107.5);
+  \draw[cell] (168,96) rectangle (204,109);
+  \filldraw[oth2] (168,96) rectangle (204,109);
+  \draw[ink!55,line width=0.4pt] (175.2,97.5) -- (175.2,107.5);
+  \draw[ink!55,line width=0.4pt] (182.4,97.5) -- (182.4,107.5);
+  \draw[ink!55,line width=0.4pt] (189.6,97.5) -- (189.6,107.5);
+  \draw[ink!55,line width=0.4pt] (196.8,97.5) -- (196.8,107.5);
+  \draw[cell] (208,96) rectangle (244,109);
+  \node[note,font=\fontsize{6.5}{8}\fontfamily{phv}\itshape,anchor=north] at (226,111) {free block};
+  \filldraw[desc] (93,126) rectangle (119,135);
+  \filldraw[desc] (133,126) rectangle (159,135);
+  \draw[link] (119,130.5) -- (133,130.5);
+  \draw[ptr] (106,126) -- (106,113);
+  \draw[ptr] (146,126) -- (146,113);
+\end{tikzpicture}%

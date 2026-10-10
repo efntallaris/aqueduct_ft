@@ -1,0 +1,29 @@
+%-------------------------------------------------------------------------------
+\section{Background and Motivation}
+\label{sec:background}
+
+\subsection{Keyspace Partitioning in Distributed In-Memory Stores}
+\label{sec:partitioning}
+
+A foundational design choice in any distributed data store is the mechanism by which the keyspace is divided among nodes~\cite{slicer,shard-manager}. Partitioning determines not only where a given record resides at any point in time, but also how the system responds to membership changes: which records must move, how they are located, and how quickly they can be transferred~\cite{akkio}. Across systems, two broad families of partitioning scheme are in use---static hash-slot assignment and consistent hashing on a token ring~\cite{karger-consistent-hashing,dynamodb}---and both give rise to the same underlying memory-layout problem that SAMM addresses.
+
+\paragraph{Hash-slot partitioning.}
+In this approach, the keyspace is divided into a fixed number of discrete slots, each assigned to exactly one node. Keys are mapped to slots via a hash function applied to the key. Redis Cluster, which uses 16,384 slots assigned via CRC16~\cite{redisclusterconfig}, is the canonical example of this model.
+
+\paragraph{Token-ring partitioning.}
+Alternatively, nodes are assigned positions on a circular hash ring and are responsible for all keys whose hash falls within their token range. Apache Cassandra~\cite{cassandra-paper}, which supports multiple virtual token ranges per node to improve load balance, and Amazon Dynamo~\cite{dynamodb} and DynamoDB~\cite{dynamodb-atc22}, which split and reassign hash ranges automatically as tables grow, follow this approach.
+
+\paragraph{Data layout does not follow the logical data organization.}
+In both schemes, rebalancing requires gathering all records belonging to a partition unit---a slot or a token range---from wherever the storage layer has placed them and streaming them to a new owner~\cite{rocksteady,netmigrate}. For disk-based systems such as Cassandra, sorted SSTable files~\cite{bigtable} provide natural co-location within a token range, reducing streaming to sequential reads. For in-memory systems such as Redis, no such structure exists~\cite{mica,memc3}. A general-purpose heap allocator interleaves records from all slots without regard to slot membership, so gathering a single slot's records requires a full hash-index traversal followed by random pointer-chased reads across the heap. It is precisely this regime---in-memory, hash-indexed, mutation-heavy~\cite{atikoglu-kv-workload,yang-twitter-cache,scaling-memcache}---that SAMM is designed to address.
+
+\subsection{The Memory-Layout Bottleneck}
+\label{sec:layout-bottleneck}
+
+General-purpose allocators such as jemalloc~\cite{jemalloc} and TCMalloc~\cite{tcmalloc} optimise for throughput and low fragmentation across arbitrary allocation patterns~\cite{rumble-log-memory}. They organise free memory into size-class bins and per-thread arenas~\cite{hoard_paper}. The physical placement of two allocations is determined by availability within those bins, not by any semantic relationship between the objects. As a result, records belonging to the same slot are interleaved with records from all other slots throughout the heap.
+
+During slot migration, the server must traverse its global hash table, identify all keys in the target slot, and dereference each value pointer to retrieve the associated record~\cite{rocksteady}. These pointer dereferences generate random accesses across the heap, thrashing CPU caches and precluding vectorised or DMA-assisted bulk copies~\cite{kvdirect,lite-rdma}. The migration throughput is therefore bounded not by network bandwidth but by memory-access latency---a fundamental impedance mismatch between the application's logical model and the allocator's physical layout.
+
+\subsection{Motivating Example}
+\label{sec:motivation-experiment}
+
+\textcolor{red}{[OPEN: ``preview'' results]}

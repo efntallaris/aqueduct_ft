@@ -1,0 +1,68 @@
+% USENIX template (usenix2019_v3.sty, from
+% https://www.usenix.org/conferences/author-resources/paper-templates).
+% The previous IEEEtran version is in backups/paper_ieee_before_usenix.tex.
+\documentclass[letterpaper,twocolumn,10pt]{article}
+\usepackage{usenix2019_v3}   % also loads cite, xcolor, hyperref, microtype, Times
+
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{array}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,decorations.pathreplacing}
+% circled step number, shared by Fig.~1 and the protocol text
+\newcommand{\mstep}[1]{\tikz[baseline={([yshift=-0.34em]s.center)}]\node[circle,fill=black!85,text=white,inner sep=0pt,minimum size=8.4pt,text height=4.65pt,text depth=0pt,font=\fontsize{6.5}{6.5}\fontfamily{phv}\bfseries\selectfont](s){#1};}
+\usepackage{float} % for [H] float placement specifier
+
+\usepackage{algorithm}
+\usepackage{algpseudocode} % from algorithmicx
+
+% --- New text marker ---
+\newcommand{\newtext}[1]{{\color{blue}#1}}
+
+% --- Pseudocode visual helpers ---
+\newcommand{\phasesep}[1]{\Statex {\color{gray}\hrulefill\;\textit{\small #1}\;\hrulefill}}
+\newcommand{\msg}[1]{\textsc{#1}}
+\newcommand{\fn}[1]{\textnormal{\textsc{#1}}}
+\algnewcommand{\Upon}[1]{\Statex \textbf{upon} #1 \textbf{do}}
+\algnewcommand{\EndUpon}{\Statex \textbf{end upon}}
+
+\begin{document}
+
+\newcommand{\OurImplementation}{Aqueduct}
+
+% don't print a date
+\date{}
+
+% USENIX titles: bold, 14pt
+\title{\Large \bf Paper Title}
+
+\author{
+{\rm First Author}\\
+First Institution
+\and
+{\rm Second Author}\\
+Second Institution
+% copy the following lines to add more authors
+% \and
+% {\rm Name}\\
+% Institution
+} % end author
+
+\maketitle
+
+\begin{abstract}
+Abstract goes here. USENIX asks for no more than 200 words, preferably closer to 150.
+\end{abstract}
+
+\input{design.tex}
+\input{pseudocodes/migration_leader_to_leader.tex}
+\input{pseudocodes/migration_recipient_leader.tex}
+\input{pseudocodes/migration_donor_recovery.tex}
+\input{pseudocodes/migration_recipient_leader_recovery.tex}
+\input{pseudocodes/migration_recipient_node_recovery.tex}
+\input{migration_rdma_faq.tex}
+
+\bibliographystyle{plain}
+\bibliography{paper}
+\end{document}

@@ -1,0 +1,42 @@
+\begin{tikzpicture}
+    % Define styles
+    \tikzstyle{slot} = [draw, minimum width=1.5cm, minimum height=1cm, align=center, font=\sffamily\bfseries]
+    \tikzstyle{block} = [draw, minimum width=2cm, minimum height=1cm, align=center, font=\sffamily]
+    \tikzstyle{arrow} = [thick, ->, >=stealth]
+
+    % Draw Slots (non-empty and empty alternately)
+    \node[slot] (slot_i) at (0, 0) {Slot\textsubscript{i}};
+    \node[slot] (slot_empty_1) at (0, -1) {};
+    \node[slot] (slot_j) at (0, -2) {Slot\textsubscript{j}};
+    \node[slot] (slot_empty_2) at (0, -3) {};
+    \node[slot] (slot_k) at (0, -4) {Slot\textsubscript{k}};
+    \node[slot] (slot_empty_3) at (0, -5) {};
+
+    % Draw blocks and arrows for Slot i
+    \node[block, right=2cm of slot_i.east] (block_i1) {};
+    \node[block, right=1.5cm of block_i1.east] (block_i2) {};
+    \node[block, right=1.5cm of block_i2.east] (block_i3) {};
+    \draw[arrow] (slot_i.east) -- (block_i1.west);
+    \draw[arrow] (block_i1.east) -- (block_i2.west);
+    \draw[arrow] (block_i2.east) -- (block_i3.west);
+
+    % Draw curly brace and label "Allocated blocks for Slot_i"
+    \draw [line width=1mm, decorate, decoration={brace, amplitude=10pt}] (block_i1.north west) -- (block_i3.north east) 
+        node[midway, above=10pt, font=\sffamily\large\bfseries\itshape, text=black] {Allocated Blocks for Slot\textsubscript{i}};
+
+    % Draw blocks and arrows for Slot j
+    \node[block, right=2cm of slot_j.east] (block_j1) {};
+    \node[block, right=1.5cm of block_j1.east] (block_j2) {};
+    \draw[arrow] (slot_j.east) -- (block_j1.west);
+    \draw[arrow] (block_j1.east) -- (block_j2.west);
+
+    % Draw blocks and arrows for Slot k
+    \node[block, right=2cm of slot_k.east] (block_k1) {};
+    \node[block, right=1.5cm of block_k1.east] (block_k2) {};
+    \draw[arrow] (slot_k.east) -- (block_k1.west);
+    \draw[arrow] (block_k1.east) -- (block_k2.west);
+
+    % Label "Slots" without the curved line
+    \node[above=10pt, font=\sffamily\large\bfseries\itshape, text=black] at ($(slot_i.north)$) {Slots};
+
+\end{tikzpicture}

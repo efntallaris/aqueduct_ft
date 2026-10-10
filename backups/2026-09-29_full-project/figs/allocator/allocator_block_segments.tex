@@ -1,0 +1,25 @@
+\begin{tikzpicture}
+    % Define colors
+    \definecolor{specialsegment}{RGB}{184, 198, 228} % Light blue
+    \definecolor{usedsegment}{RGB}{208, 206, 206}   % Light gray
+    \definecolor{freesegment}{rgb}{1, 1, 1}            % White
+
+    % Draw segments
+    \draw[fill=specialsegment, draw=black] (0, 0) rectangle (1.5, 0.6);  % Special segment (prologue)
+    \draw[fill=usedsegment, draw=black] (1.5, 0) rectangle (3, 0.6);     % Used segment
+    \draw[fill=freesegment, draw=black] (3, 0) rectangle (4.5, 0.6);     % Free segment
+    \draw[fill=usedsegment, draw=black] (3.0, 0) rectangle (3.6, 0.6);   % Small used segment inside free segment
+    \draw[fill=usedsegment, draw=black] (4.5, 0) rectangle (6, 0.6);     % Used segment
+    \draw[fill=freesegment, draw=black] (5.2, 0) rectangle (6, 0.6);   % Small free segment inside used segment
+    \draw[fill=specialsegment, draw=black] (6, 0) rectangle (7.5, 0.6);  % Special segment (epilogue)
+
+    % Draw legend
+    \draw[fill=specialsegment, draw=black] (0, -1) rectangle (0.4, -1.4);
+    \node[anchor=west] at (0.5, -1.2) {Special segment};
+
+    \draw[fill=usedsegment, draw=black] (3, -1) rectangle (3.4, -1.4);
+    \node[anchor=west] at (3.5, -1.2) {Used segment};
+
+    \draw[fill=freesegment, draw=black] (6, -1) rectangle (6.4, -1.4);
+    \node[anchor=west] at (6.5, -1.2) {Free segment};
+\end{tikzpicture}

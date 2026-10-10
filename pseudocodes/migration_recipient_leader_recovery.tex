@@ -9,27 +9,54 @@
     \State \textbf{return}
   \EndIf
 
+  \phasesep{Notify the donor of completed groups}
+
+  \For{\textbf{each} $G_i$ with \msg{index\_update} committed}
+    \State \fn{Send\_RPC}(donor\_leader, \msg{g\_i\_done}($G_i$)) \Comment{may repeat}
+  \EndFor
+
   \phasesep{Resume incomplete groups}
 
-  \State active\_groups $\leftarrow$ \fn{Query\_Gi\_With\_State}(\msg{prepared})
-  \Statex \hspace{\algorithmicindent}\hspace{\algorithmicindent} \textbf{or} \fn{Query\_Gi\_With\_State}(\msg{transferred})
+  \State active\_groups $\leftarrow$ groups with \msg{txn\_start}, no \msg{index\_update}
+  \State \textbf{wait} one heartbeat for replica reports
 
   \For{\textbf{each} $G_i$ \textbf{in} active\_groups}
 
-    \State \textbf{wait until} majority of $\texttt{RDMA\_RECEIVED}[R_i][G_i] = \texttt{true}$
+    \phasesep{Obtain the data first}
 
-    \If{$\texttt{RDMA\_RECEIVED}[\texttt{self}][G_i] = \texttt{false}$}
-      \State \fn{Ask\_Data\_From\_Donor}() \Comment{self missed the data}
-      \State \textbf{wait until} \msg{rdma\_done} of $G_i$
+    \If{$\texttt{TRANSFERRED}[\texttt{self}][G_i] = \texttt{false}$} \Comment{own flag}
+      \If{$\exists R_j$: $\texttt{TRANSFERRED}[R_j][G_i] = \texttt{true}$}
+        \State \fn{Fetch\_From\_Replica}($R_j$, $G_i$)
+      \Else
+        \State \fn{Send\_RPC}(donor\_leader, \msg{resend}($G_i$))
+        \State \textbf{wait until} \msg{rdma\_done} of $G_i$ \Comment{timeout: re-request}
+      \EndIf
+      \State $\texttt{TRANSFERRED}[\texttt{self}][G_i] \leftarrow \texttt{true}$
     \EndIf
 
-    \phasesep{Finalize index update}
+    \phasesep{Resume the intra-recipient phase}
 
-    \State \fn{Raft\_Append}(\msg{index\_update}($G_i$))
-    \State \fn{Raft\_Commit}()
-    \State \fn{Apply\_Update\_Index}($G_i$)
+    \State chain $\leftarrow$ \fn{Build\_Chain}(live replicas lacking $G_i$)
+    \State \fn{Async\_Replicate\_To}(chain, $G_i$)
+    \State \fn{Execute\_Update\_Index}($G_i$) \Comment{in parallel}
+    \State \textbf{wait until} majority of $\texttt{TRANSFERRED}[R_i][G_i] = \texttt{true}$
+    \Statex \hspace{\algorithmicindent}\hspace{\algorithmicindent} \textbf{and} local index update of $G_i$ is done
+    \State \fn{Log\_Append}(\msg{index\_update}($G_i$)); \fn{Log\_Commit}()
+    \State \fn{Send\_RPC}(donor\_leader, \msg{g\_i\_done}($G_i$))
 
   \EndFor
+\EndUpon
+
+\Statex
+
+\Upon{\fn{Receive} \msg{query\_state}($G_i$) \textbf{from} donor\_leader}
+  \If{\msg{index\_update}($G_i$) is committed}
+    \State \fn{Reply}(\msg{gi\_done})
+  \ElsIf{$\exists$ live $R_j$: $\texttt{TRANSFERRED}[R_j][G_i] = \texttt{true}$}
+    \State \fn{Reply}(\msg{transferred}) \Comment{may go stale}
+  \Else
+    \State \fn{Reply}(\msg{missing})
+  \EndIf
 \EndUpon
 
 \end{algorithmic}

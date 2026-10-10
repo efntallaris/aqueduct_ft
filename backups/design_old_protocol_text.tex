@@ -1,0 +1,135 @@
+% OLD protocol text, kept for comparison; the new version is protocol.tex (input below).
+\iffalse
+\subsection{Fault Tolerant Migration protocol}
+\label{sec:migration-protocol}
+
+The migration protocol is designed to operate concurrently with client requests and relies on Raft for coordination of source and reciepient,
+and one-sided RDMA for efficient bulk data transfer.
+Data migrations in \OurImplementation{} are managed by the \emph{Migration Manager (MM)} module, which orchestrates the entire migration process on the source and destination nodes.
+The MM ensures seamless data transfer and coordinates the ownership handover upon successful migration.
+The migration process involves both the transfers of data and its integration into the destination node’s active dataset.
+
+During migration, there are two replica groups involved.
+the \emph{donor} (source) group, which holds the data to be migrated, and the \emph{recipient} (destination) group,
+which will receive and integrate the migrated data. Each group has a leader and followers. The leader coordinates the migration process within its group.
+
+At first, the protocol should transfer the data from the source to the destination (leader-to-leader) and ensure the migrating data can tolerate crashes before stoping the double reads.
+Before stopping the double reads and disconnecting the source replica group for that group, the destination replica group should transfer the data to a majority of replicas (leader-to-replica)
+and integrate the received data into leader recipient recplica’s active dataset via index updates (Section~\ref{sec:index_updating}).
+Leader-to-replica on the destination replica group, have two paths. The fast path which the majority of the replicas have received the migrating data. This path must finish before stopping the double reads to ensure that the data is available on a majority of replicas.
+The slow path which the minority of the replicas have not received the data. This can happen asynchronously and can complete after stopping the double reads.
+At some point all nodes will eventually receive the migrated data from either the fast path or the slow path.
+% Then, the destination integrates the received data into its active dataset via index updates (Section~\ref{sec:index_updating}).
+Fig.~\ref{fig:migration_flow} provides an overview of \OurImplementation{}’s migration process.
+Migration is initiated by a coordinator $C$, which instructs target source replica leader to start a transaction and migrate a set of slots to a destination replica leader $D$.
+The protocol proceeds in subtransactions ($G_i$), each corresponding to a subset of the total slots.
+The following sections describe each phase of the protocol in detail, organized by the communication pattern: intra-donor operations (Section~\ref{sec:intra-donor}), leader-to-leader transfer (Section~\ref{sec:leader-to-leader}), and intra-recipient operations (Section~\ref{sec:intra-recipient}).
+After all groups complete, a transaction is considered complete and can safely cleanup the transaction state.
+
+\subsection{Migration Phases}
+\label{sec:migration-phases}
+
+\subsubsection{Intra-donor operations}
+\label{sec:intra-donor}
+
+The migration of a slot group $G_i$ begins with the donor replication group preparing the data for transfer.
+The migration manager on the donor leader initiates the migration of group $G_i$ by entering a prepare phase.
+During this phase, the donor leader identifies the memory blocks associated with the slots in $G_i$ and registers them with its RNIC as the source of the transfer.
+It then sends a \texttt{prepare} request to the recipient leader through a reliable control path.
+The recipient leader allocates landing buffers for $G_i$, registers them as memory regions, and replies with their memory addresses, sizes, and RDMA access keys (RKeys), which the donor uses for its RDMA writes.
+This phase establishes all necessary state for bulk data transfer without moving any data.
+
+Before starting the transfer, the donor leader appends a \texttt{$G_i$\_START} entry to the Raft log and commits it, making the migration intent durable.
+After the recipient confirms that $G_i$ has been fully replicated (Section~\ref{sec:intra-recipient}), the donor appends and commits a \texttt{$G_i$\_DONE} entry, marking the group as complete.
+These two entries allow a recovering donor leader to determine which groups are in-flight and which have finished (Algorithm~\ref{alg:donor-recovery}).
+
+\newtext{On the recipient side, a \texttt{txn\_start($G_i$)} entry must be committed in its Raft log before processing any client operations for the migrating group.
+This is necessary so that replicas know to maintain tombstones for deleted keys, which would otherwise be resurrected during index updates (Section~\ref{sec:index_updating}).
+Symmetrically, once \texttt{INDEX\_UPDATE($G_i$)} is committed, the recipient leader appends a \texttt{txn\_done($G_i$)} entry, closing its session so that a later leader election does not try to recover $G_i$.}
+
+\subsubsection{Leader-to-leader transfer}
+\label{sec:leader-to-leader}
+
+Once preparation completes, the donor leader performs one-sided RDMA \texttt{WRITE} operations to transfer the data of group $G_i$ directly into pre-allocated memory on the recipient leader.
+Data movement occurs entirely off the CPU fast path and does not require involvement of the recipient leader during transfer.
+After all RDMA operations for $G_i$ complete, the donor leader issues an explicit \texttt{RDMA\_DONE} notification to the recipient group.
+
+\subsubsection{Intra-recipient operations}
+\label{sec:intra-recipient}
+
+Upon receiving the transferred data, the recipient leader propagates the migrated state to the replicas in its replication group.
+\newtext{Data is propagated to the replicas using a chain replication protocol over RDMA.
+The leader picks an ordering of replicas and writes to the first one; when that replica finishes, it signals \texttt{RDMA\_DONE} to the next, and so on down the chain.
+Each replica piggybacks the status of its received buffers onto its \texttt{AppendEntries} responses back to the leader.}
+
+\paragraph{Fast and slow replication paths.}
+This replication follows two paths.
+In the \emph{fast path}, the recipient leader synchronously ensures that the migrated data is durably replicated to a majority of replicas.
+This step is required before the system can safely stop serving reads from the donor group.
+In the \emph{slow path}, the remaining replicas receive the migrated data asynchronously after the group is made available for serving.
+\newtext{Replicas in the slow path either receive the data as part of the ongoing replication chain or obtain it from the leader as part of a log-sync action, when executing \texttt{AppendEntries} that include an \texttt{INDEX\_UPDATE} entry.}
+Eventually, all replicas converge to the same state.
+
+\subsubsection{Index updating}
+\label{sec:index_updating}
+
+Transferring data using RDMA enables the source node to write data directly into the target node's memory.
+However, transferring raw data alone is insufficient.
+In \OurImplementation{}, a dictionary-like data structure serves as an index, maintaining pointers to the actual key-value pairs.
+Therefore, after the data transfer completes, the dictionary is updated to reflect the new memory locations—a process referred to as the \emph{index update}.
+
+\OurImplementation{} handles index updates using dedicated background threads with lower scheduling priority to minimize interference with client-serving operations.
+Since these background threads run concurrently with client threads, multiple threads may access and update the dictionary simultaneously.
+To ensure consistency, \OurImplementation{} employs fine-grained locking for dictionary access and modification.
+
+\paragraph{Stale entry detection.}
+During migration, all new writes are directed to the destination node. Consequently, data received from the source may contain stale versions of keys. As part of the index update, \OurImplementation{} detects and discards these stale entries,
+ensuring that only the most recent values are preserved in the dictionary.
+
+\paragraph{Tombstones for deleted keys.}
+\newtext{Recipient replicas must keep tombstones for deleted keys while a migration transaction is active.
+Consider a key $K$ that is first updated and then deleted at the recipient before the index update runs.
+Without a tombstone, the index update would blindly insert the older version of $K$ from the donor, effectively resurrecting a deleted key.
+The tombstone lets the index update skip $K$.
+Once the index update for $G_i$ finishes, its tombstones can be garbage-collected.}
+
+\paragraph{INDEX\_UPDATE proposal.}
+\newtext{Once a majority of replicas have confirmed receipt of the RDMA buffers for $(txn\_id, G_i)$ through their \texttt{AppendEntries} responses, 
+and its own local index update, which runs in parallel with the chain replication, has finished, the recipient leader proposes the \texttt{INDEX\_UPDATE($G_i$)} command via Raft.
+Once this entry is committed, a majority of the recipient group holds the data of $G_i$.
+A newly elected leader that lacks part of it locates the data on the other replicas of its group and fetches it before serving $G_i$.}
+
+\subsubsection{Commit and group completion}
+\label{sec:commit-completion}
+
+After a majority of the recipient replicas acknowledge successful replication of group $G_i$, the migration of the group is considered complete.
+The donor leader records the completion of $G_i$ as a committed event via Raft, making the progress durable.
+At this point, ownership of the slots in $G_i$ is transferred to the recipient group, and the system proceeds to the next migration group.
+This design guarantees that, even in the presence of failures, at least one replica in the recipient group holds the complete migrated data.
+
+
+\subsection{Serving Client Requests During Migration}
+\label{sec:serving-during-migration}
+
+\OurImplementation{} is designed to migrate data without interrupting client-facing operations.
+% Throughout the migration process, the system continues to serve both read and write requests while preserving linearizability under the assumptions of Section~\ref{sec:system-model}.
+
+For slots that are not currently under migration, requests are handled normally by their owning replication group.
+For slots belonging to an active migration group $G_i$, request routing depends on the operation type and the migration phase.
+
+\noindent{\textbf{Writes}}
+Once migration of a group $G_i$ begins, all new write operations targeting slots in $G_i$ are redirected to the recipient replication group.
+Writes are processed through the recipient leader and synchronously replicated using Raft, ensuring that all committed updates are preserved even if failures occur during migration.
+This redirection prevents divergence between donor and recipient replicas and eliminates the need for write-back or reconciliation after migration.
+
+\noindent{\textbf{Reads}}
+Read requests targeting slots in $G_i$ may be served by either the donor or the recipient group, depending on data availability and migration progress.
+Before the completion of the fast replication path on the recipient side, reads may be served from the donor group to avoid exposing incomplete state.
+After a majority of recipient replicas have received the migrated data, reads are served exclusively by the recipient group.
+This controlled transition ensures that reads never observe partially migrated or unreplicated state.
+\newtext{Double reads for $G_i$ can stop once the recipient leader has committed \texttt{INDEX\_UPDATE($G_i$)} via Raft.
+After that, the data of $G_i$ is held by a majority of the recipient group, and any newly elected leader can obtain it from its group before serving $G_i$, so the recipient group can serve $G_i$ on its own.}
+
+Since writes go to the recipient from the start and reads switch over only after a majority has the data, no committed update is lost and clients always see a consistent state.
+Throughout the migration, every key is served by at least one group that holds its latest version.
+\fi

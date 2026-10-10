@@ -1,0 +1,97 @@
+% Fig. 2 -- recovery of one group after the recipient leader crashes.
+% Same conventions as figs/1.tex: 252-unit-wide grid (x unit = \columnwidth/252),
+% y in pt growing downwards, labels at 7.5pt. \input it directly.
+\begin{tikzpicture}[x={\columnwidth/252},y=-1pt,
+    font=\fontsize{7.5}{9}\fontfamily{phv}\selectfont,
+    >={Stealth[length=4pt,width=3.2pt]},
+    lifeline/.style={draw=lifegray,line width=0.8pt},
+    deadline/.style={draw=lifegray,line width=0.8pt,dash pattern=on 1pt off 2pt},
+    shard/.style={draw=ink,line width=0.6pt,fill=white,rounded corners=1.5pt,
+                  minimum width=24pt,minimum height=12pt,inner sep=0pt},
+    leader/.style={shard,fill=ink,text=white,font=\fontsize{7.5}{9}\fontfamily{phv}\bfseries},
+    msg/.style={->,draw=ink,line width=0.6pt},
+    bulk/.style={->,draw=ink,line width=1.8pt,>={Stealth[length=5pt,width=5pt]}},
+    notify/.style={->,draw=ink,line width=0.6pt,dash pattern=on 2.2pt off 1.4pt},
+    crash/.style={draw=ink,line width=1.6pt,line cap=round},
+    lbl/.style={inner sep=1pt,text=ink},
+    phase/.style={rounded corners=2pt},
+    phaselbl/.style={anchor=north west,inner sep=1.5pt,outer sep=0pt,
+                     font=\fontsize{7.5}{9}\fontfamily{phv}\bfseries},
+  ]
+  \definecolor{ink}{RGB}{34,34,34}
+  \definecolor{lifegray}{RGB}{165,165,165}
+  \definecolor{llfill}{gray}{0.93}  % before the crash
+  \definecolor{irfill}{gray}{0.86}  % recovery
+  \def\Gi{\textit{G}\textsubscript{\textit{i}}}
+  \def\us{{\fontencoding{T1}\selectfont\_}}% thin underscore glyph
+  % lettered step badge, same geometry as the numbered badges of Fig. 1
+  \def\rstep#1{\tikz[baseline={([yshift=-2.7pt]s.center)}]\node[circle,fill=ink,text=white,inner sep=0pt,minimum size=9.6pt,text height=5.1pt,text depth=0.7pt,font=\fontsize{7.2}{7.2}\fontfamily{phv}\bfseries\selectfont](s){#1};}
+  \def\xmark{\tikz[baseline=-2.7pt]{\draw[crash] (-3pt,-3pt) -- (3pt,3pt); \draw[crash] (-3pt,3pt) -- (3pt,-3pt);}}
+
+  % lifeline x positions
+  \def\Ah{26}                              % donor leader A3
+  \def\Bo{100} \def\Bt{163} \def\Bh{226}  % recipient: B1 (old leader), B2, B3
+  \def\crashy{97}
+  \def\bottom{302}
+
+  % phase backgrounds
+  \fill[phase,llfill] (0,50) rectangle (252,106);
+  \fill[phase,irfill] (0,111) rectangle (252,282);
+
+  % lifelines; B1 is dotted after its crash
+  \foreach \x in {\Ah,\Bt,\Bh} \draw[lifeline] (\x,33) -- (\x,\bottom);
+  \draw[lifeline] (\Bo,33) -- (\Bo,\crashy);
+  \draw[deadline] (\Bo,\crashy) -- (\Bo,\bottom);
+
+  % replica groups and shards
+  \node[font=\fontsize{7.5}{9}\fontfamily{phv}\bfseries,anchor=base] at (\Ah,6) {Donor};
+  \node[font=\fontsize{7.5}{9}\fontfamily{phv}\bfseries,anchor=base] at (\Bt,6) {Recipient shard group};
+  \draw[ink,line width=0.5pt] (\Ah-14,15) -- ++(0,-3) -- (\Ah+14,12) -- ++(0,3);
+  \draw[ink,line width=0.5pt] (\Bo-14,15) -- ++(0,-3) -- (\Bh+12,12) -- ++(0,3);
+  \node[leader] at (\Ah,27) {A3};
+  \node[leader] at (\Bo,27) {B1};
+  \node[shard]  at (\Bt,27) {B2};
+  \node[shard]  at (\Bh,27) {B3};
+  \node[lbl,fill=white,font=\fontsize{7}{8}\fontfamily{phv}\itshape] at (\Ah,41) {leader};
+  \node[lbl,fill=white,font=\fontsize{7}{8}\fontfamily{phv}\itshape] at (\Bo,41) {leader};
+
+  % before the crash: B1 receives G_i but crashes before replicating it
+  \node[phaselbl,fill=llfill] at (2,52) {Before the crash};
+  \draw[bulk] (\Ah,76) -- node[lbl,above=2pt,fill=llfill] {transfer} (\Bo,76);
+  \draw[msg]  (\Ah,89) -- node[lbl,above=2pt,fill=llfill] {done}     (\Bo,89);
+  \draw[crash] (\Bo-4.2,\crashy-4) -- (\Bo+4.2,\crashy+4);
+  \draw[crash] (\Bo-4.2,\crashy+4) -- (\Bo+4.2,\crashy-4);
+  \node[lbl,right=5pt,fill=llfill,font=\fontsize{7.5}{9}\fontfamily{phv}\bfseries] at (\Bo,\crashy) {B1 crashes};
+
+  % recovery, driven by the new recipient leader B2
+  \node[phaselbl,fill=irfill] at (2,113) {Recovery};
+  \node[leader,minimum width=30pt] at (\Bt,126) {leader};
+  \node[lbl,right=3pt,fill=irfill,anchor=west] at (\Bt+15,126) {\rstep{a}\hspace{2pt}elected};
+
+  \draw[msg,rounded corners=2pt] (\Bt,141) -- ++(12,0) -- ++(0,9) -- (\Bt,150);
+  \node[lbl,right=3pt,fill=irfill,align=left,anchor=west] at (\Bt+12,145.5)
+    {\rstep{b}\hspace{2pt}\Gi{} in flight,\\\hspace{11.6pt}data missing};
+
+  \draw[msg]  (\Bt,170) -- node[lbl,above=2pt,fill=irfill] {\rstep{c}\hspace{2pt}resend \Gi} (\Ah,170);
+  \draw[msg]  (\Ah,183) -- node[lbl,above=2pt,fill=irfill] {prepare}  (\Bt,183);
+  \draw[msg]  (\Bt,196) -- node[lbl,above=2pt,fill=irfill] {MRs}      (\Ah,196);
+  \draw[bulk] (\Ah,211) -- node[lbl,above=2pt,fill=irfill] {\rstep{d}\hspace{2pt}transfer} (\Bt,211);
+  \draw[msg]  (\Ah,224) -- node[lbl,above=2pt,fill=irfill] {done}     (\Bt,224);
+
+  \draw[bulk] (\Bt,241) -- node[lbl,above=2pt,align=center,font=\fontsize{7.5}{8}\fontfamily{phv}\selectfont] {\rstep{e}\hspace{2pt}chain\\replication} (\Bh,241);
+  \draw[msg]  (\Bh,254) -- node[lbl,above=2pt,fill=irfill] {ack (2/3)} (\Bt,254);
+  \node[lbl,above=2pt,fill=irfill] at ({(\Bt+\Bh)/2},274) {\rstep{f}\hspace{2pt}INDEX\us UPDATE};
+  \draw[notify] (\Bt,274) -- (\Bh,274);
+
+  % B2 reports completion; the donor commits DONE(G_i)
+  \node[lbl,above=2pt,fill=white] at ({(\Ah+\Bt)/2},297) {\rstep{g}\hspace{2pt}DONE(\Gi)};
+  \draw[msg] (\Bt,297) -- (\Ah,297);
+
+  % legend: one centred row, equal gaps
+  \def\key#1{\tikz[baseline=-2.7pt]\draw[#1] (0pt,0pt) -- (16pt,0pt);\hspace{3pt}}
+  \node[inner sep=0pt,anchor=base] at (126,318) {%
+    \key{msg}RPC\hspace{11pt}%
+    \key{notify}Log entry\hspace{11pt}%
+    \key{bulk}RDMA write\hspace{11pt}%
+    \xmark\hspace{3pt}Crash};
+\end{tikzpicture}%

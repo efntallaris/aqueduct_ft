@@ -1,0 +1,62 @@
+\begin{algorithm}[t]
+\small
+\caption{Donor Leader Recovery}
+\label{alg:donor-recovery}
+\begin{algorithmic}[1]
+
+\Upon{\msg{leader\_election\_complete}}
+  \If{\textbf{not} (self.group\_type is DONOR \textbf{and} self is LEADER)}
+    \State \textbf{return}
+  \EndIf
+
+  \If{$\neg$ \fn{Has\_Active\_Migration\_Txn}()}
+    \State \textbf{return}
+  \EndIf
+
+  \phasesep{Load migration progress from Raft}
+
+  \State started\_groups $\leftarrow$ \fn{Raft\_Query\_Gi\_With\_State}(\msg{started})
+  \State done\_groups $\leftarrow$ \fn{Raft\_Query\_Gi\_With\_State}(\msg{done})
+
+  \For{\textbf{each} $G_i$ \textbf{in} started\_groups}
+
+    \If{$G_i \in$ done\_groups}
+      \State \fn{Mark\_Group\_Complete}($G_i$) \Comment{completed before failure}
+      \State \textbf{continue}
+    \EndIf
+
+    \phasesep{Query recipient for $G_i$ state}
+
+    \State \fn{Send\_RPC}(recipient\_leader, \msg{query\_gi\_state}($G_i$))
+    \State state $\leftarrow$ \fn{Wait\_Reply}(recipient\_leader)
+
+    \Statex
+
+    \If{state $=$ \msg{gi\_done}}
+      \State \fn{Raft\_Append\_Log}(\msg{gi\_done}) \Comment{finalize locally}
+      \State \fn{Raft\_Commit}()
+
+    \ElsIf{state $=$ \msg{transferred}}
+      \State \fn{Wait\_For\_Gi\_Done}($G_i$) \Comment{replication ongoing}
+
+    \ElsIf{state $=$ \msg{prepared}}
+      \State \fn{Start\_RDMA\_Transfer}($G_i$) \Comment{re-issue RDMA writes}
+      \State \fn{Wait\_For\_Completion}($G_i$)
+
+    \Else
+      \State \fn{Defer\_Gi}($G_i$) \Comment{revisit later}
+    \EndIf
+
+  \EndFor
+
+  \phasesep{Global transaction completion}
+
+  \If{\fn{All\_Groups\_Done}()}
+    \State \fn{Raft\_Append\_Log}(\msg{txn\_migration\_done})
+    \State \fn{Raft\_Commit}()
+  \EndIf
+
+\EndUpon
+
+\end{algorithmic}
+\end{algorithm}

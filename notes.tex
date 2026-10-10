@@ -1,0 +1,27 @@
+% Working notes, printed at the end of the paper (before the references).
+% Remove the \input{notes.tex} line in paper.tex before submission.
+
+\clearpage  % keep the notes (and their algorithms) after the references
+\section*{Notes}
+
+\paragraph{Why a slot-aware allocation policy instead of a scattered layout?}
+Where the benefit is real:
+\begin{itemize}
+  \item \emph{Zero copy on both ends.}
+  With scattered pairs, the donor has to pack them into a buffer, which costs CPU time and a memory copy, or send many tiny scatter-gather entries.
+  With the slot-aware allocator, the blocks already are the transfer unit.
+  They also land on the recipient in their final place, so the recipient only rebuilds its index and never unpacks data.
+  \item \emph{Far fewer RDMA operations.}
+  A few large writes can reach full link speed.
+  Many small key-value writes are limited by how many messages per second the network card can handle, so they don't.
+  \item \emph{CPU left for clients.}
+  Because neither side copies data, migration takes almost no CPU away from foreground requests.
+  This is probably the strongest argument.
+\end{itemize}
+
+\paragraph{Pseudocode.}
+Normal operation of the donor and the recipient leader, and handling of a failed recipient follower.
+
+\input{pseudocodes/migration_leader_to_leader.tex}
+\input{pseudocodes/migration_recipient_leader.tex}
+\input{pseudocodes/migration_recipient_node_recovery.tex}

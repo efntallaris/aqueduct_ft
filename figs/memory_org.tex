@@ -1,0 +1,134 @@
+% Fig. -- slot-aware memory organization (two panels).
+% Each panel: donor memory -> RDMA descriptors (WQEs) -> recipient memory.
+% Same conventions as figs/1.tex: 252-unit grid scaled to \columnwidth,
+% y in pt growing downwards, 7.5pt Helvetica, grayscale.
+\begin{tikzpicture}[x={\columnwidth/252},y=-1pt,
+    font=\fontsize{7.5}{9}\fontfamily{phv}\selectfont,
+    >={Stealth[length=3.2pt,width=2.6pt]},
+    cell/.style={draw=ink,line width=0.4pt},
+    mig/.style={cell,fill=ink!80},          % the slot being migrated
+    oth/.style={cell,fill=ink!15},          % other slots
+    free/.style={cell,fill=white},
+    mr/.style={draw=ink,line width=0.6pt,dash pattern=on 1.6pt off 1.1pt,rounded corners=1pt},
+    desc/.style={draw=ink,line width=0.5pt,fill=white,rounded corners=1pt,
+                 font=\fontsize{6.5}{7}\fontfamily{phv}\selectfont},
+    ptr/.style={->,draw=ink,line width=0.5pt},
+    link/.style={->,draw=ink!60,line width=0.4pt},
+    write/.style={->,draw=ink,line width=1.4pt,>={Stealth[length=4pt,width=4pt]}},
+    title/.style={anchor=base west,inner sep=0pt,font=\fontsize{7.5}{9}\fontfamily{phv}\bfseries},
+    row/.style={anchor=base west,inner sep=0pt,text=ink!75,font=\fontsize{6.5}{8}\fontfamily{phv}\itshape},
+  ]
+  \definecolor{ink}{RGB}{34,34,34}
+
+  % legend
+  \node[anchor=base,inner sep=0pt] at (126,0) {%
+    \tikz[baseline=0pt]\filldraw[mig] (0,0) rectangle (6pt,6pt);\hspace{2pt}migrating slot\hspace{8pt}%
+    \tikz[baseline=0pt]\filldraw[oth] (0,0) rectangle (6pt,6pt);\hspace{2pt}other slots\hspace{8pt}%
+    \tikz[baseline=0pt]\draw[mr] (0,0) rectangle (8pt,6pt);\hspace{2pt}registered MR};
+
+  \node[title] at (0,14) {(a) Scattered: 5 MRs, 5 WQEs, 5 writes};
+  \node[row] at (0,26) {donor memory};
+  \filldraw[oth] (4,29) rectangle (18.21,42);
+  \filldraw[mig] (18.21,29) rectangle (28.87,42);
+  \filldraw[oth] (28.87,29) rectangle (46.64,42);
+  \filldraw[oth] (46.64,29) rectangle (62.04,42);
+  \filldraw[mig] (62.04,29) rectangle (70.33,42);
+  \filldraw[oth] (70.33,29) rectangle (82.17,42);
+  \filldraw[oth] (82.17,29) rectangle (96.39,42);
+  \filldraw[mig] (96.39,29) rectangle (109.42,42);
+  \filldraw[oth] (109.42,29) rectangle (128.37,42);
+  \filldraw[oth] (128.37,29) rectangle (139.03,42);
+  \filldraw[oth] (139.03,29) rectangle (153.24,42);
+  \filldraw[mig] (153.24,29) rectangle (162.72,42);
+  \filldraw[oth] (162.72,29) rectangle (179.3,42);
+  \filldraw[oth] (179.3,29) rectangle (191.15,42);
+  \filldraw[oth] (191.15,29) rectangle (204.17,42);
+  \filldraw[mig] (204.17,29) rectangle (216.02,42);
+  \filldraw[oth] (216.02,29) rectangle (231.42,42);
+  \filldraw[oth] (231.42,29) rectangle (248,42);
+  \draw[mr] (16.61,27.2) rectangle (30.47,43.8);
+  \draw[mr] (60.44,27.2) rectangle (71.93,43.8);
+  \draw[mr] (94.79,27.2) rectangle (111.02,43.8);
+  \draw[mr] (151.64,27.2) rectangle (164.32,43.8);
+  \draw[mr] (202.57,27.2) rectangle (217.62,43.8);
+  \node[desc,minimum width=19pt,minimum height=10pt,inner sep=0pt,anchor=north west] at (13.54,54) {WQE};
+  \node[desc,minimum width=19pt,minimum height=10pt,inner sep=0pt,anchor=north west] at (56.18,54) {WQE};
+  \node[desc,minimum width=19pt,minimum height=10pt,inner sep=0pt,anchor=north west] at (92.9,54) {WQE};
+  \node[desc,minimum width=19pt,minimum height=10pt,inner sep=0pt,anchor=north west] at (147.98,54) {WQE};
+  \node[desc,minimum width=19pt,minimum height=10pt,inner sep=0pt,anchor=north west] at (200.1,54) {WQE};
+  \draw[link] (33.54,59) -- (56.18,59);
+  \draw[link] (76.18,59) -- (92.9,59);
+  \draw[link] (112.9,59) -- (147.98,59);
+  \draw[link] (167.98,59) -- (200.1,59);
+  \draw[ptr] (23.54,54) -- (23.54,43.8);
+  \draw[ptr] (66.18,54) -- (66.18,43.8);
+  \draw[ptr] (102.9,54) -- (102.9,43.8);
+  \draw[ptr] (157.98,54) -- (157.98,43.8);
+  \draw[ptr] (210.1,54) -- (210.1,43.8);
+  \filldraw[free] (4,76) rectangle (248,89);
+  \filldraw[mig] (18.21,76) rectangle (28.87,89);
+  \filldraw[mig] (62.04,76) rectangle (70.33,89);
+  \filldraw[mig] (96.39,76) rectangle (109.42,89);
+  \filldraw[mig] (153.24,76) rectangle (162.72,89);
+  \filldraw[mig] (204.17,76) rectangle (216.02,89);
+  \draw[write] (23.54,64) -- (23.54,76);
+  \draw[write] (66.18,64) -- (66.18,76);
+  \draw[write] (102.9,64) -- (102.9,76);
+  \draw[write] (157.98,64) -- (157.98,76);
+  \draw[write] (210.1,64) -- (210.1,76);
+  \node[row] at (0,97) {recipient memory};
+  \node[title] at (0,113) {(b) Slot-aware: 2 MRs, 2 WQEs, 2 writes};
+  \node[row] at (0,125) {donor memory};
+  \filldraw[oth] (4,128) rectangle (41.33,141);
+  \draw[ink!50,line width=0.4pt] (11.47,130) -- (11.47,139);
+  \draw[ink!50,line width=0.4pt] (18.93,130) -- (18.93,139);
+  \draw[ink!50,line width=0.4pt] (26.4,130) -- (26.4,139);
+  \draw[ink!50,line width=0.4pt] (33.87,130) -- (33.87,139);
+  \filldraw[oth] (45.33,128) rectangle (82.67,141);
+  \draw[ink!50,line width=0.4pt] (57.78,130) -- (57.78,139);
+  \draw[ink!50,line width=0.4pt] (70.22,130) -- (70.22,139);
+  \filldraw[mig] (86.67,128) rectangle (124,141);
+  \draw[white,line width=0.4pt] (94.13,130) -- (94.13,139);
+  \draw[white,line width=0.4pt] (101.6,130) -- (101.6,139);
+  \draw[white,line width=0.4pt] (109.07,130) -- (109.07,139);
+  \draw[white,line width=0.4pt] (116.53,130) -- (116.53,139);
+  \filldraw[mig] (128,128) rectangle (165.33,141);
+  \draw[white,line width=0.4pt] (140.44,130) -- (140.44,139);
+  \draw[white,line width=0.4pt] (152.89,130) -- (152.89,139);
+  \filldraw[oth] (169.33,128) rectangle (206.67,141);
+  \draw[ink!50,line width=0.4pt] (176.8,130) -- (176.8,139);
+  \draw[ink!50,line width=0.4pt] (184.27,130) -- (184.27,139);
+  \draw[ink!50,line width=0.4pt] (191.73,130) -- (191.73,139);
+  \draw[ink!50,line width=0.4pt] (199.2,130) -- (199.2,139);
+  \filldraw[free] (210.67,128) rectangle (248,141);
+  \draw[mr] (85.07,126.2) rectangle (125.6,142.8);
+  \draw[mr] (126.4,126.2) rectangle (166.93,142.8);
+  \node[desc,minimum width=24.7pt,minimum height=10pt,inner sep=0pt,anchor=north west] at (92.33,153) {WQE};
+  \node[desc,minimum width=24.7pt,minimum height=10pt,inner sep=0pt,anchor=north west] at (133.67,153) {WQE};
+  \draw[link] (118.33,158) -- (133.67,158);
+  \draw[ptr] (105.33,153) -- (105.33,142.8);
+  \draw[ptr] (146.67,153) -- (146.67,142.8);
+  \filldraw[oth] (4,175) rectangle (41.33,188);
+  \draw[ink!50,line width=0.4pt] (13.33,177) -- (13.33,186);
+  \draw[ink!50,line width=0.4pt] (22.67,177) -- (22.67,186);
+  \draw[ink!50,line width=0.4pt] (32,177) -- (32,186);
+  \filldraw[free] (45.33,175) rectangle (82.67,188);
+  \filldraw[mig] (86.67,175) rectangle (124,188);
+  \draw[white,line width=0.4pt] (94.13,177) -- (94.13,186);
+  \draw[white,line width=0.4pt] (101.6,177) -- (101.6,186);
+  \draw[white,line width=0.4pt] (109.07,177) -- (109.07,186);
+  \draw[white,line width=0.4pt] (116.53,177) -- (116.53,186);
+  \filldraw[mig] (128,175) rectangle (165.33,188);
+  \draw[white,line width=0.4pt] (135.47,177) -- (135.47,186);
+  \draw[white,line width=0.4pt] (142.93,177) -- (142.93,186);
+  \draw[white,line width=0.4pt] (150.4,177) -- (150.4,186);
+  \draw[white,line width=0.4pt] (157.87,177) -- (157.87,186);
+  \filldraw[oth] (169.33,175) rectangle (206.67,188);
+  \draw[ink!50,line width=0.4pt] (178.67,177) -- (178.67,186);
+  \draw[ink!50,line width=0.4pt] (188,177) -- (188,186);
+  \draw[ink!50,line width=0.4pt] (197.33,177) -- (197.33,186);
+  \filldraw[free] (210.67,175) rectangle (248,188);
+  \draw[write] (105.33,163) -- (105.33,175);
+  \draw[write] (146.67,163) -- (146.67,175);
+  \node[row] at (0,196) {recipient memory};
+\end{tikzpicture}%

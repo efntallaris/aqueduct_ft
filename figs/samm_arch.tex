@@ -1,0 +1,33 @@
+% Fig. -- SAMM architecture: the layers between the KVS and the operating system.
+% Same conventions as figs/1.tex: 252-unit-wide grid (x unit = \columnwidth/252),
+% y in pt growing downwards, labels at 7.5pt Helvetica. Grayscale only.
+\begin{tikzpicture}[x={\columnwidth/252},y=-1pt,
+    font=\fontsize{7.5}{9}\fontfamily{phv}\selectfont,
+    every node/.append style={text height=5.4pt,text depth=1.6pt},
+    >={Stealth[length=4pt,width=3.2pt]},
+    ours/.style={draw=ink,line width=0.6pt,fill=ink!30,rounded corners=1.5pt},
+    base/.style={draw=ink,line width=0.6pt,fill=ink!8,rounded corners=1.5pt},
+    app/.style={draw=ink!70,line width=0.6pt,fill=white,rounded corners=1.5pt,dash pattern=on 2pt off 1.4pt},
+    call/.style={->,draw=ink,line width=0.6pt},
+    lbl/.style={inner sep=1pt,text=ink!80,font=\fontsize{7}{8}\fontfamily{phv}\itshape},
+  ]
+  \definecolor{ink}{RGB}{34,34,34}
+
+  % layers (top to bottom)
+  \filldraw[app]  (63,4)   rectangle (189,20);  \node at (126,12)  {KVS (hash index)};
+  \filldraw[ours] (63,34)  rectangle (189,50);  \node at (126,42)  {segment allocator};
+  \filldraw[ours] (63,50)  rectangle (189,66);  \node at (126,58)  {slot table and block lists};
+  \filldraw[base] (63,80)  rectangle (189,96);  \node at (126,88)  {jemalloc};
+  \filldraw[base] (63,110) rectangle (189,126); \node at (126,118) {OS: mmap, hugepages};
+
+  % the two SAMM layers, grouped by a brace on the left
+  \draw[draw=ink!70,line width=0.5pt,decorate,decoration={brace,amplitude=3pt}] (58,65.5) -- (58,34.5);
+  \node[inner sep=0pt,font=\fontsize{7.5}{9}\fontfamily{phv}\bfseries] at (38,45.5) {SAMM};
+  \node[lbl,inner sep=0pt] at (38,54.5) {(Fig.~\ref{fig:samm})};
+
+  % calls between layers (labels to the right of the arrows)
+  \draw[call] (126,20) -- (126,34);  \node[lbl,anchor=west] at (130,27)  {alloc(slot, size)};
+  \draw[call] (126,66) -- (126,80);  \node[lbl,anchor=west] at (130,73)  {alloc / free a block};
+  \draw[call] (126,96) -- (126,110); \node[lbl,anchor=west] at (130,103) {map memory};
+
+\end{tikzpicture}%

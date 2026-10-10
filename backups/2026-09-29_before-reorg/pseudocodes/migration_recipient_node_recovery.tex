@@ -1,0 +1,15 @@
+\begin{algorithm}[t]
+\small
+\caption{Recipient Node Failure Handling}
+\label{alg:recipient-node-recovery}
+\begin{algorithmic}[1]
+
+\Upon{\msg{replication\_failure}($G_i$, $R_{i+1}$)}
+  \State \fn{Mark\_Node\_Failed}($R_{i+1}$)
+  \State next $\leftarrow$ \fn{Find\_Next\_Alive\_Node}($i+1$)
+  \State \fn{Update\_Chain}($G_i$, \textbf{replace} $R_{i+1}$ \textbf{with} next)
+  \State \fn{Async\_Replicate\_To}(next, $G_i$)
+\EndUpon
+
+\end{algorithmic}
+\end{algorithm}
