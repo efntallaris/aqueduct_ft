@@ -28,11 +28,11 @@
   \State \fn{Async\_Replicate\_To}(chain, $G_i$) \Comment{chain-forward}
   \State \fn{Execute\_Update\_Index}($G_i$) \Comment{in parallel}
 
-  \phasesep{Majority wait \& INDEX\_UPDATE}
+  \phasesep{Majority wait \& GI\_TRANSFER\_DURABLE}
 
   \State \textbf{wait until} majority of $\texttt{TRANSFERRED}[R_i][G_i] = \texttt{true}$
   \Statex \hspace{\algorithmicindent}\hspace{\algorithmicindent} \textbf{and} local index update of $G_i$ is done
-  \State \fn{Log\_Append}(\msg{index\_update}($G_i$))
+  \State \fn{Log\_Append}(\msg{gi\_transfer\_durable}($G_i$))
   \State \fn{Log\_Commit}()
 
   \Statex

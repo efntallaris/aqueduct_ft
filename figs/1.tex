@@ -99,7 +99,7 @@
   \draw[notify] (\Bo,259) -- (\Bt,259);
   \draw[notify] (\Bo,259) -- (\Bh,259);
 
-  % DONE(G_i): right after INDEX_UPDATE commits, the recipient leader reports
+  % DONE(G_i): right after GI_TRANSFER_DURABLE commits, the recipient leader reports
   % completion and the donor leader logs it
   \node[lbl,above=2pt,fill=white] at ({(\Ao+\Ah)/2},279) {\fstep{7}\hspace{2pt}DONE(\Gi)};
   \draw[msg] (\Bo,279) -- (\Ah,279);
@@ -116,7 +116,7 @@
   % \crashat{\Ah}{67}{e}{C1}   % donor leader, after START, before the transfer
   % \crashat{\Bo}{146}{w}{C2}  % recipient leader, holds the data, before replicating it
   % \crashat{\Bt}{180}{w}{C3}  % chain follower (B2), during chain replication
-  % \crashat{\Bo}{287}{w}{C4}  % recipient leader, after INDEX_UPDATE, before DONE
+  % \crashat{\Bo}{287}{w}{C4}  % recipient leader, after GI_TRANSFER_DURABLE, before DONE
 
   % legend: one centred row, equal gaps, arrows at mid x-height of the text
   \def\key#1{\tikz[baseline=-2.7pt]\draw[#1] (0pt,0pt) -- (18pt,0pt);\hspace{4pt}}

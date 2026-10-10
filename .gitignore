@@ -33,12 +33,6 @@ latex.out/
 *.md5
 *.auxlock
 
-## TLA+ / TLC model checker output
-tlap/states/
-tlap/*_trace_*.tlc
-tlap/*_TTrace_*.tla
-tlap/*_TTrace_*.bin
-
 ## Editor leftovers
 *~
 *.swp

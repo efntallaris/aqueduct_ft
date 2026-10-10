@@ -74,7 +74,7 @@ When SAMM needs a new block for a slot, it invokes the arena's alloc hook, recei
     \midrule
     \texttt{START($G_i$)}         & donor     & resume $G_i$ after a crash \\
     \texttt{TXN\_START($G_i$)}    & recipient & keep tombstones for $G_i$ \\
-    \texttt{INDEX\_UPDATE($G_i$)} & recipient & stop double reads for $G_i$ \\
+    \texttt{GI\_TRANSFER\_DURABLE($G_i$)} & recipient & stop double reads for $G_i$ \\
     \texttt{DONE($G_i$)}          & donor     & skip $G_i$ on recovery \\
     \bottomrule
   \end{tabular*}
