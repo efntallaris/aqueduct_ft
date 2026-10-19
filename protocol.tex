@@ -69,16 +69,6 @@ Ownership of the slots moves per group, not once per transaction. When \texttt{G
 
 % Chain replication text, commented out for now.
 \textcolor{red}{TBD: Chain replication}
-
-\begin{figure}[t]
-  \centering
-  \scalebox{0.85}{\input{figs/chain_repair.tex}}
-  \caption{Chain repair with five recipient replicas.
-  (a)~B3 crashes during chain replication, so B4 and B5 never receive $G_i$.
-  (b)~B1 tells B2, the closest live replica before the gap that holds $G_i$, to forward it to B4, the next live replica, and B4 forwards it to B5.
-  B1, B2, and B4 form a majority, so B1 commits \texttt{TRANSFER\_DURABLE($G_i$)}.}
-  \label{fig:chain_repair}
-\end{figure}
 % \textcolor{green!50!black}{The recipient leader runs two activities in parallel: its own index update of $G_i$ (Section~\ref{sec:index_updating}), and chain replication of the data over RDMA.
 % The leader orders the live replicas into a chain and writes the data to the first one. Each replica that has received the data forwards it to its successor and signals it with a \texttt{CHAIN\_DONE} message, and reports the buffers it holds in its replies to the leader's log-replication messages~(step~\mstep{4}).
 % The chain is set up before the migration starts, off its critical path.
