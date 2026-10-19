@@ -75,7 +75,7 @@ Ownership of the slots moves per group, not once per transaction. When \texttt{G
   \input{figs/chain_repair.tex}
   \caption{Chain repair with five recipient replicas.
   (a)~B3 crashes during chain replication, so B4 and B5 never receive $G_i$.
-  (b)~B1 writes $G_i$ to B4, the next live replica, with new RKeys, and B4 forwards it to B5.
+  (b)~B1 tells B2, the closest live replica before the gap that holds $G_i$, to forward it to B4, the next live replica, and B4 forwards it to B5.
   B1, B2, and B4 form a majority, so B1 commits \texttt{TRANSFER\_DURABLE($G_i$)}.}
   \label{fig:chain_repair}
 \end{figure}

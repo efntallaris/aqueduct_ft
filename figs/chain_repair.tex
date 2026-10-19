@@ -1,8 +1,9 @@
 % Chain repair with five recipient replicas (f = 2).
 % Same grid and styles as Fig. 1: x unit is \columnwidth/252, y grows downwards.
 % (a) B3 crashes mid-chain, so B4 and B5 never receive the data.
-% (b) The leader writes the data straight to B4, the next live replica,
-%     with new RKeys, and the chain continues to B5.
+% (b) The leader tells B2, the closest live replica before the gap that holds
+%     the data, to forward it to B4, the next live replica, and the chain
+%     continues to B5.
 \begin{tikzpicture}[x={\columnwidth/252},y=-1pt,
     font=\fontsize{7.5}{9}\fontfamily{phv}\selectfont,
     >={Stealth[length=4pt,width=3.2pt]},
@@ -12,6 +13,7 @@
     leader/.style={shard,fill=ink,text=white,font=\fontsize{7.5}{9}\fontfamily{phv}\bfseries},
     dead/.style={shard,draw=lifegray,text=lifegray},
     bulk/.style={->,draw=ink,line width=1.8pt,>={Stealth[length=5pt,width=5pt]}},
+    msg/.style={->,draw=ink,line width=0.6pt},
     lost/.style={->,draw=lifegray,line width=1.8pt,>={Stealth[length=5pt,width=5pt]},
                  dash pattern=on 3pt off 2pt},
     lbl/.style={inner sep=1pt,text=ink},
@@ -42,14 +44,15 @@
   \node[lbl,font=\fontsize{7}{8}\fontfamily{phv}\itshape] at ({(\Bd+\Be)/2},46) {never receive \Gi};
 
   % (b) the chain after the repair
-  \node[rowlbl] at (0,70) {(b) B1 writes \Gi{} to B4, the next live replica};
+  \node[rowlbl] at (0,70) {(b) B1 tells B2 to forward \Gi{} to B4};
   \node[leader] at (\Ba,104) {B1};
   \node[held]   at (\Bb,104) {B2};
   \node[dead]   at (\Bc,104) {B3};
   \node[held]   at (\Bd,104) {B4};
   \node[held]   at (\Be,104) {B5};
   \crash{\Bc+12}{98}
-  \draw[bulk,rounded corners=6pt] (\Ba,97) -- (\Ba,86) -- node[lbl,above=1pt,fill=white] {new RKeys} (\Bd,86) -- (\Bd,97);
+  \draw[msg] (\Ba+13,104) -- node[lbl,above=2pt,font=\fontsize{6.6}{7}\fontfamily{phv}\selectfont] {forward} (\Bb-13,104);
+  \draw[bulk,rounded corners=6pt] (\Bb,97) -- (\Bb,86) -- (\Bd,86) -- (\Bd,97);
   \draw[bulk] (\Bd+13,104) -- (\Be-13,104);
 
   % majority: the leader plus f = 2 followers that report the data
@@ -59,5 +62,6 @@
   % legend
   \node[inner sep=0pt,anchor=base] at (126,152) {%
     \tikz[baseline=-2.7pt]\node[held,minimum width=12pt,minimum height=8pt]{};\hspace{4pt}holds \Gi{} (flag set)\hspace{14pt}%
+    \tikz[baseline=-2.7pt]\draw[msg] (0pt,0pt) -- (18pt,0pt);\hspace{4pt}RPC\hspace{14pt}%
     \tikz[baseline=-2.7pt]\draw[bulk] (0pt,0pt) -- (18pt,0pt);\hspace{4pt}RDMA write};
 \end{tikzpicture}%
