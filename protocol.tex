@@ -141,9 +141,9 @@ A replica that crashes restarts with the flag cleared, since its buffers were in
 \paragraph{Donor recovery.}
 A newly elected donor leader resumes each group that has \texttt{START($G_i$)} but no \texttt{DONE($G_i$)} (Algorithm~\ref{alg:donor-recovery}).
 It asks the recipient leader for the state of the group with a \texttt{QUERY\_STATE($G_i$)} RPC, and the recipient answers from its log and from the transferred flags.
-The reply is \texttt{GI\_DONE} if \texttt{GI\_TRANSFER\_DURABLE($G_i$)} is committed, \texttt{TRANSFERRED} if the flag of some live replica is set, and \texttt{MISSING} otherwise.
-The donor then commits \texttt{DONE($G_i$)} on \texttt{GI\_DONE}, waits for the recipient to complete the group on \texttt{TRANSFERRED}, and transfers the group again, starting from \texttt{prepare}, on \texttt{MISSING}.
-Only \texttt{GI\_DONE} is final, because it comes from the log.
+The reply is \texttt{DURABLE} if \texttt{GI\_TRANSFER\_DURABLE($G_i$)} is committed, \texttt{TRANSFERRED} if the flag of some live replica is set, and \texttt{MISSING} otherwise.
+The donor then commits \texttt{DONE($G_i$)} on \texttt{DURABLE}, waits for the recipient to complete the group on \texttt{TRANSFERRED}, and transfers the group again, starting from \texttt{prepare}, on \texttt{MISSING}.
+Only \texttt{DURABLE} is final, because it comes from the log.
 The other two replies come from soft state and can become stale, but neither error is harmful.
 A \texttt{MISSING} reply that underestimates the recipient's progress only causes an extra transfer.
 If the replicas holding the data crash after a \texttt{TRANSFERRED} reply, the recipient leader asks for the data again, and the donor can always serve it, because it keeps its copy of $G_i$ until \texttt{DONE($G_i$)} commits.
@@ -164,7 +164,7 @@ It obtains the data before it waits for a majority, because if every replica tha
 
 \paragraph{Timeouts.}
 Failures are detected through timeouts or broken connections (Section~\ref{sec:fault-model}), so every wait that depends on another node has a timeout.
-A donor leader that gets no reply to \texttt{QUERY\_STATE($G_i$)}, or no \texttt{GI\_DONE} after a \texttt{TRANSFERRED} reply or a new transfer, queries the recipient leader again, finding the new leader if it has changed.
+A donor leader that gets no reply to \texttt{QUERY\_STATE($G_i$)}, or no \texttt{DURABLE} after a \texttt{TRANSFERRED} reply or a new transfer, queries the recipient leader again, finding the new leader if it has changed.
 A recipient leader that asked for the data and gets no \texttt{RDMA\_DONE} asks again.
 A newly elected recipient leader waits one heartbeat interval for the flags of the replicas and treats a replica that does not answer as lacking the data.
 Timeouts affect only liveness, never safety.

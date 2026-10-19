@@ -51,7 +51,7 @@
 
 \Upon{\fn{Receive} \msg{query\_state}($G_i$) \textbf{from} donor\_leader}
   \If{\msg{gi\_transfer\_durable}($G_i$) is committed}
-    \State \fn{Reply}(\msg{gi\_done})
+    \State \fn{Reply}(\msg{durable})
   \ElsIf{$\exists$ live $R_j$: $\texttt{TRANSFERRED}[R_j][G_i] = \texttt{true}$}
     \State \fn{Reply}(\msg{transferred}) \Comment{may go stale}
   \Else

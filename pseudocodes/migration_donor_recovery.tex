@@ -32,17 +32,17 @@
 
     \Statex
 
-    \If{state $=$ \msg{gi\_done}}
+    \If{state $=$ \msg{durable}}
       \State \fn{Log\_Append}(\msg{done}($G_i$)) \Comment{finalize locally}
       \State \fn{Log\_Commit}()
 
     \ElsIf{state $=$ \msg{transferred}}
-      \State \fn{Wait\_For\_Gi\_Done}($G_i$) \Comment{timeout: re-query}
+      \State \fn{Wait\_For\_Durable}($G_i$) \Comment{timeout: re-query}
 
     \ElsIf{state $=$ \msg{missing}}
       \State \fn{Send\_RPC}(recipient\_leader, \msg{prepare}($G_i$))
       \State \fn{Start\_RDMA\_Transfer}($G_i$) \Comment{resend}
-      \State \fn{Wait\_For\_Gi\_Done}($G_i$) \Comment{timeout: re-query}
+      \State \fn{Wait\_For\_Durable}($G_i$) \Comment{timeout: re-query}
 
     \Else
       \State \fn{Defer\_Gi}($G_i$) \Comment{timeout: re-query later}
