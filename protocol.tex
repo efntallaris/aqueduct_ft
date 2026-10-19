@@ -68,7 +68,35 @@ Ownership of the slots moves per group, not once per transaction. When \texttt{G
 \label{sec:chain-replication}
 
 % Chain replication text, commented out for now.
-\textcolor{red}{TBD: Chain replication}
+The recipient leader replicates the data of $G_i$ to its followers with chain replication over RDMA, in parallel with its own index update of $G_i$ (Section~\ref{sec:index_updating}).
+The leader orders the live replicas into a chain and writes the data to the first one.
+Each replica that has received the data forwards it to its successor and signals it with a \texttt{CHAIN\_DONE} message~(step~\mstep{4}).
+The chain is set up before the migration starts, off its critical path.
+The recipient leader opens an RDMA connection to every follower and registers landing buffers on each of them, and the followers connect to each other, so any replica can forward the data to any other.
+Each transaction gets its own transaction ID and its own landing buffers on every replica, so the groups of concurrent donors never overwrite each other.
+
+\paragraph{Transfer state.}
+The leader learns the state of the transfer without extra messages.
+Every replica piggybacks it on its replies to the leader's \texttt{AppendEntries} messages, reporting which landing buffers of $G_i$ it holds and whether its transferred flag is set.
+A replica sets the flag only after the whole of $G_i$ has landed, that is, after it receives \texttt{RDMA\_DONE} from the donor or \texttt{CHAIN\_DONE} from its predecessor, because one-sided RDMA writes do not notify it.
+The leader therefore knows at any time how far the data has travelled down the chain.
+It learns that a majority holds $G_i$ once $f$ followers have reported it, without waiting for the rest of the chain.
+Replication to this majority is synchronous. The remaining replicas receive the data asynchronously from the ongoing chain.
+
+\paragraph{Chain repair.}
+The leader keeps a timeout for each replica in the chain.
+The timeout of a replica starts when its predecessor reports that it holds $G_i$, and stops when the replica reports it as well.
+If the timeout expires, the leader treats the replica as failed and lets it out of the chain.
+It then tells the closest live replica before it that holds $G_i$ to forward the data to the next live replica.
+This is the leader itself if no follower before the failed replica holds $G_i$.
+The data does not change during the transfer, so the forwarding replica sends the whole of $G_i$ again and needs no record of what it sent before.
+A broken RDMA connection to a replica triggers the same repair without waiting for the timeout.
+A replica that was let out of the chain and comes back reports a cleared flag, and the leader has the data forwarded to it in the same way.
+
+Chain repair affects only liveness.
+The leader counts a replica as holding $G_i$ only when that replica reports it, so a timeout never makes \texttt{TRANSFER\_DURABLE($G_i$)} commit early.
+A timeout that fires too early only removes a slow replica from the chain, and that replica still receives the data later.
+If no majority can be reached, \texttt{TRANSFER\_DURABLE($G_i$)} never commits, and the migration fails visibly instead of silently losing data.
 % \textcolor{green!50!black}{The recipient leader runs two activities in parallel: its own index update of $G_i$ (Section~\ref{sec:index_updating}), and chain replication of the data over RDMA.
 % The leader orders the live replicas into a chain and writes the data to the first one. Each replica that has received the data forwards it to its successor and signals it with a \texttt{CHAIN\_DONE} message, and reports the buffers it holds in its replies to the leader's log-replication messages~(step~\mstep{4}).
 % The chain is set up before the migration starts, off its critical path.
