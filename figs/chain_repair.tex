@@ -1,0 +1,63 @@
+% Chain repair with five recipient replicas (f = 2).
+% Same grid and styles as Fig. 1: x unit is \columnwidth/252, y grows downwards.
+% (a) B3 crashes mid-chain, so B4 and B5 never receive the data.
+% (b) The leader writes the data straight to B4, the next live replica,
+%     with new RKeys, and the chain continues to B5.
+\begin{tikzpicture}[x={\columnwidth/252},y=-1pt,
+    font=\fontsize{7.5}{9}\fontfamily{phv}\selectfont,
+    >={Stealth[length=4pt,width=3.2pt]},
+    shard/.style={draw=ink,line width=0.6pt,fill=white,rounded corners=1.5pt,
+                  minimum width=24pt,minimum height=12pt,inner sep=0pt},
+    held/.style={shard,fill=irfill},
+    leader/.style={shard,fill=ink,text=white,font=\fontsize{7.5}{9}\fontfamily{phv}\bfseries},
+    dead/.style={shard,draw=lifegray,text=lifegray},
+    bulk/.style={->,draw=ink,line width=1.8pt,>={Stealth[length=5pt,width=5pt]}},
+    lost/.style={->,draw=lifegray,line width=1.8pt,>={Stealth[length=5pt,width=5pt]},
+                 dash pattern=on 3pt off 2pt},
+    lbl/.style={inner sep=1pt,text=ink},
+    rowlbl/.style={anchor=west,inner sep=0pt,font=\fontsize{7.5}{9}\fontfamily{phv}\bfseries},
+  ]
+  \definecolor{ink}{RGB}{34,34,34}
+  \definecolor{lifegray}{RGB}{165,165,165}
+  \definecolor{irfill}{gray}{0.86}
+  \def\Gi{\textit{G}\textsubscript{\textit{i}}}
+  \def\crash#1#2{%
+    \draw[ink,line width=1.2pt,line cap=round] (#1-3.2,#2-3.2) -- (#1+3.2,#2+3.2) (#1-3.2,#2+3.2) -- (#1+3.2,#2-3.2);}
+
+  % replica x positions
+  \def\Ba{22} \def\Bb{74} \def\Bc{126} \def\Bd{178} \def\Be{230}
+
+  % (a) the chain before the repair
+  \node[rowlbl] at (0,8) {(a) B3 crashes during chain replication};
+  \node[leader] at (\Ba,30) {B1};
+  \node[held]   at (\Bb,30) {B2};
+  \node[dead]   at (\Bc,30) {B3};
+  \node[shard]  at (\Bd,30) {B4};
+  \node[shard]  at (\Be,30) {B5};
+  \crash{\Bc+12}{24}
+  \draw[bulk] (\Ba+13,30) -- (\Bb-13,30);
+  \draw[bulk] (\Bb+13,30) -- (\Bc-13,30);
+  \draw[lost] (\Bc+13,30) -- (\Bd-13,30);
+  \draw[lost] (\Bd+13,30) -- (\Be-13,30);
+  \node[lbl,font=\fontsize{7}{8}\fontfamily{phv}\itshape] at ({(\Bd+\Be)/2},46) {never receive \Gi};
+
+  % (b) the chain after the repair
+  \node[rowlbl] at (0,70) {(b) B1 writes \Gi{} to B4, the next live replica};
+  \node[leader] at (\Ba,104) {B1};
+  \node[held]   at (\Bb,104) {B2};
+  \node[dead]   at (\Bc,104) {B3};
+  \node[held]   at (\Bd,104) {B4};
+  \node[held]   at (\Be,104) {B5};
+  \crash{\Bc+12}{98}
+  \draw[bulk,rounded corners=6pt] (\Ba,97) -- (\Ba,86) -- node[lbl,above=1pt,fill=white] {new RKeys} (\Bd,86) -- (\Bd,97);
+  \draw[bulk] (\Bd+13,104) -- (\Be-13,104);
+
+  % majority: the leader plus f = 2 followers that report the data
+  \draw[ink,line width=0.5pt] (\Ba-12,117) -- ++(0,3) -- (\Bd+12,120) -- ++(0,-3);
+  \node[lbl,anchor=north] at ({(\Ba+\Bd)/2},123) {majority: B1, B2, B4 report \Gi{} $\Rightarrow$ TRANSFER\_DURABLE(\Gi)};
+
+  % legend
+  \node[inner sep=0pt,anchor=base] at (126,152) {%
+    \tikz[baseline=-2.7pt]\node[held,minimum width=12pt,minimum height=8pt]{};\hspace{4pt}holds \Gi{} (flag set)\hspace{14pt}%
+    \tikz[baseline=-2.7pt]\draw[bulk] (0pt,0pt) -- (18pt,0pt);\hspace{4pt}RDMA write};
+\end{tikzpicture}%
