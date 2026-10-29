@@ -1,4 +1,4 @@
-\begin{algorithm}[H] % [H]: printed in place inside the Notes
+\begin{algorithm}[H]
 \small
 \caption{Leader-to-Leader Migration of Group $G_i$}
 \label{alg:leader-to-leader}
@@ -29,7 +29,7 @@
 
   \phasesep{Commit}
 
-  \State \fn{Wait}($L_r$, \msg{g\_i\_done}($G_i$))
+  \State \fn{Wait}($L_r$, \msg{durable}($G_i$)) \Comment{timeout: \msg{query\_state}}
   \State \fn{Log\_Append}(\msg{done}($G_i$))
   \State \fn{Log\_Commit}()
 

@@ -1,7 +1,3 @@
-% Slot lifecycle -- the states of the slots of one group G_i, left to right,
-% and what causes each transition.
-% Two-column figure: 504-unit-wide grid (x unit = \textwidth/504), y in pt
-% growing downwards, labels at 7.5pt as in figs/1.tex. \input it in a figure*.
 \begin{tikzpicture}[x={\textwidth/504},y=-1pt,
     font=\fontsize{7.5}{9}\fontfamily{phv}\selectfont,
     >={Stealth[length=4pt,width=3.2pt]},
@@ -17,14 +13,12 @@
   ]
   \definecolor{ink}{RGB}{34,34,34}
   \def\Gi{\textit{G}\textsubscript{\textit{i}}}
-  \def\us{{\fontencoding{T1}\selectfont\_}}% thin underscore glyph
-  \def\eff#1{{\fontshape{sl}\selectfont #1}}% effect of a transition
+  \def\us{{\fontencoding{T1}\selectfont\_}}%
+  \def\eff#1{{\fontshape{sl}\selectfont #1}}%
 
-  % seven columns, 72 units apart; state boxes are 50pt wide
-  \def\sy{31}   % y of the state row
-  \def\cy{47}   % top of the transition labels
+  \def\sy{31}
+  \def\cy{47}
 
-  % who serves G_i in each state
   \node[serves] at (36,6)  {Donor serves \Gi};
   \node[serves] at (180,6) {Writes at recipient, double reads};
   \node[serves] at (396,6) {Recipient serves \Gi{} alone};
@@ -32,7 +26,6 @@
   \draw[ink,line width=0.5pt] (83,15)  -- ++(0,-3) -- (277,12) -- ++(0,3);
   \draw[ink,line width=0.5pt] (299,15) -- ++(0,-3) -- (493,12) -- ++(0,3);
 
-  % states
   \node[state] at (36,\sy)  {Owned by\\donor};
   \node[state] at (108,\sy) {Flipped};
   \node[state] at (180,\sy) {Landed};
@@ -41,7 +34,6 @@
   \node[state] at (396,\sy) {Merged on\\leader};
   \node[state] at (468,\sy) {Merged on\\followers};
 
-  % transitions
   \draw[logged] (62,\sy)  -- (82,\sy);
   \draw[soft]   (134,\sy) -- (154,\sy);
   \draw[soft]   (206,\sy) -- (226,\sy);
@@ -49,17 +41,15 @@
   \draw[logged] (350,\sy) -- (370,\sy);
   \draw[logged] (422,\sy) -- (442,\sy);
 
-  % what causes each transition, and its effect, under its arrow
   \node[cause] at (72,\cy)  {START(\Gi), then\\TXN\us START(\Gi)\\\eff{new writes go}\\\eff{to the recipient}};
   \node[cause] at (144,\cy) {RDMA\us DONE\\from the donor\\\eff{data is in leader's}\\\eff{landing buffers}};
   \node[cause] at (216,\cy) {CHAIN\us DONE,\\$f$ followers report\\\eff{a majority}\\\eff{holds the data}};
-  \node[cause] at (288,\cy) {INDEX\us UPDATE(\Gi)\\commits\\\eff{clients stop}\\\eff{double reads}};
-  \node[cause] at (360,\cy) {leader applies\\INDEX\us UPDATE(\Gi)\\\eff{its index points to}\\\eff{the migrated data}};
-  \node[cause] at (432,\cy) {followers apply\\INDEX\us UPDATE(\Gi)\\\eff{any of them can}\\\eff{serve \Gi{} as leader}};
+  \node[cause] at (288,\cy) {TRANSFER\us\\DURABLE(\Gi)\\commits\\\eff{clients stop}\\\eff{double reads}};
+  \node[cause] at (360,\cy) {leader applies\\TRANSFER\us\\DURABLE(\Gi)\\\eff{its index points to}\\\eff{the migrated data}};
+  \node[cause] at (432,\cy) {followers apply\\TRANSFER\us\\DURABLE(\Gi)\\\eff{any of them can}\\\eff{serve \Gi{} as leader}};
 
-  % legend: one centred row
   \def\key#1{\tikz[baseline=-2.7pt]\draw[#1] (0pt,0pt) -- (18pt,0pt);\hspace{4pt}}
-  \node[inner sep=0pt,anchor=base] at (252,98) {%
+  \node[inner sep=0pt,anchor=base] at (252,106) {%
     \key{logged}Replicated log entry\hspace{16pt}%
     \key{soft}Soft state (not logged)};
 \end{tikzpicture}%

@@ -9,15 +9,10 @@
     \State \textbf{return}
   \EndIf
 
-  \phasesep{Notify the donor of completed groups}
-
-  \For{\textbf{each} $G_i$ with \msg{gi\_transfer\_durable} committed}
-    \State \fn{Send\_RPC}(donor\_leader, \msg{g\_i\_done}($G_i$)) \Comment{may repeat}
-  \EndFor
-
   \phasesep{Resume incomplete groups}
 
-  \State active\_groups $\leftarrow$ groups with \msg{txn\_start}, no \msg{gi\_transfer\_durable}
+  \State active\_groups $\leftarrow$ groups with \msg{txn\_start},
+  \Statex \hspace{\algorithmicindent}\hspace{\algorithmicindent} no \msg{transfer\_durable}
   \State \textbf{wait} one heartbeat for replica reports
 
   \For{\textbf{each} $G_i$ \textbf{in} active\_groups}
@@ -41,8 +36,9 @@
     \State \fn{Execute\_Update\_Index}($G_i$) \Comment{in parallel}
     \State \textbf{wait until} majority of $\texttt{TRANSFERRED}[R_i][G_i] = \texttt{true}$
     \Statex \hspace{\algorithmicindent}\hspace{\algorithmicindent} \textbf{and} local index update of $G_i$ is done
-    \State \fn{Log\_Append}(\msg{gi\_transfer\_durable}($G_i$)); \fn{Log\_Commit}()
-    \State \fn{Send\_RPC}(donor\_leader, \msg{g\_i\_done}($G_i$))
+    \State \fn{Log\_Append}(\msg{transfer\_durable}($G_i$))
+    \State \fn{Log\_Commit}()
+    \State \fn{Send\_RPC}(donor\_leader, \msg{durable}($G_i$))
 
   \EndFor
 \EndUpon
@@ -50,10 +46,14 @@
 \Statex
 
 \Upon{\fn{Receive} \msg{query\_state}($G_i$) \textbf{from} donor\_leader}
-  \If{\msg{gi\_transfer\_durable}($G_i$) is committed}
-    \State \fn{Reply}(\msg{gi\_done})
+  \If{\msg{transfer\_durable}($G_i$) is committed}
+    \State \fn{Reply}(\msg{durable})
+  \ElsIf{$\texttt{TRANSFERRED}[\texttt{self}][G_i] = \texttt{true}$} \Comment{own flag}
+    \State \fn{Reply}(\msg{transferred})
   \ElsIf{$\exists$ live $R_j$: $\texttt{TRANSFERRED}[R_j][G_i] = \texttt{true}$}
-    \State \fn{Reply}(\msg{transferred}) \Comment{may go stale}
+    \State \fn{Fetch\_From\_Replica}($R_j$, $G_i$)
+    \State $\texttt{TRANSFERRED}[\texttt{self}][G_i] \leftarrow \texttt{true}$
+    \State \fn{Reply}(\msg{transferred})
   \Else
     \State \fn{Reply}(\msg{missing})
   \EndIf

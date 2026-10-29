@@ -1,7 +1,3 @@
-% Fig. -- SAMM: slot table, per-slot block lists, the layout of one block,
-% and the layout of one segment. Grayscale only.
-% Same conventions as figs/1.tex: 252-unit-wide grid (x unit = \columnwidth/252),
-% y in pt growing downwards, labels at 7.5pt Helvetica.
 \begin{tikzpicture}[x={\columnwidth/252},y=-1pt,
     font=\fontsize{7.5}{9}\fontfamily{phv}\selectfont,
     every node/.append style={text height=5.4pt,text depth=1.6pt},
@@ -25,15 +21,12 @@
   \definecolor{ink}{RGB}{34,34,34}
   \def\kv#1{\textit{k}\textsubscript{#1}, \textit{v}\textsubscript{#1}}
 
-  % titles
   \node[ttl,anchor=base] at (26,6) {Slot table};
   \node[ttl] at (70,6) {Blocks of each slot};
 
-  % zoom areas, drawn first so that everything else sits on top
   \path[zoom] (126.5,53) -- (163.5,53) -- (248,92) -- (4,92) -- cycle;
   \path[zoom] (94,110) -- (150,110) -- (212,128) -- (40,128) -- cycle;
 
-  % slot table
   \filldraw[cellrow] (4,12) rectangle (48,26);
   \filldraw[cellgap] (4,26) rectangle (48,40);
   \filldraw[cellrow] (4,40) rectangle (48,54);
@@ -43,7 +36,6 @@
   \node at (26,47) {slot \textit{j}};
   \node[text=ink!50] at (26,61) {$\cdots$};
 
-  % blocks of slot i
   \draw[ptr] (48,19) -- (70,19);
   \node[blk] (bi0) at (90,19)  {block 0};
   \node[blk] (bi1) at (145,19) {block 1};
@@ -53,14 +45,12 @@
   \draw[dlink] ([yshift=2.2pt]bi1.east) -- ([yshift=2.2pt]bi2.west);
   \draw[dlink] ([yshift=-2.2pt]bi2.west) -- ([yshift=-2.2pt]bi1.east);
 
-  % blocks of slot j; block 1 is shown enlarged below
   \draw[ptr] (48,47) -- (70,47);
   \node[blk]  (bj0) at (90,47)  {block 0};
   \node[blkz] (bj1) at (145,47) {block 1};
   \draw[dlink] ([yshift=2.2pt]bj0.east) -- ([yshift=2.2pt]bj1.west);
   \draw[dlink] ([yshift=-2.2pt]bj1.west) -- ([yshift=-2.2pt]bj0.east);
 
-  % one block: prologue, segments, epilogue
   \filldraw[meta] (4,92) rectangle (22,110);
   \node[text=white] at (13,101) {P};
   \filldraw[used] (22,92) rectangle (70,110);
@@ -76,11 +66,9 @@
   \node[text=ink!55] at (82,101)  {free};
   \node[text=ink!55] at (162,101) {free};
 
-  % labels under the block
   \node[note] at (13,118) {prologue};
   \node[note] at (239,118) {epilogue};
 
-  % one segment: header fields, then the payload
   \filldraw[hdr]  (40,128) rectangle (68,142);
   \filldraw[hdr]  (68,128) rectangle (96,142);
   \filldraw[used] (96,128) rectangle (140,142);
@@ -94,10 +82,8 @@
   \node[note] at (67,156)  {header};
   \node[note] at (155,156) {payload};
 
-  % pointer that SAMM returns to the KVS
   \draw[ptr] (96,165) -- (96,145);
   \node[note,anchor=north] at (96,166) {pointer returned to the KVS};
-  % tight bounding box (no empty band under the last label)
   \pgfresetboundingbox
   \path (0,-2) rectangle (252,175);
 \end{tikzpicture}%

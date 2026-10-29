@@ -1,0 +1,58 @@
+\begin{tikzpicture}[x={\columnwidth/252},y=-1pt,
+    font=\fontsize{7.5}{9}\fontfamily{phv}\selectfont,
+    >={Stealth[length=3.5pt,width=2.8pt]},
+    sec/.style={anchor=base west,inner sep=0pt,
+                font=\fontsize{7.5}{9}\fontfamily{phv}\bfseries},
+    rowlbl/.style={anchor=east,inner sep=0pt,
+                   font=\fontsize{7}{8}\fontfamily{phv}\selectfont},
+    entry/.style={draw=ink,line width=0.5pt,fill=entfill,rounded corners=1pt,
+                  minimum width=30pt,minimum height=8pt,inner sep=0pt},
+    noentry/.style={entry,fill=white,draw=lifegray,dash pattern=on 1pt off 1pt},
+    flag/.style={draw=ink,line width=0.5pt,fill=ink,minimum size=7pt,inner sep=0pt},
+    noflag/.style={flag,fill=white},
+    reply/.style={draw=ink,line width=0.6pt,fill=white,rounded corners=1.5pt,
+                  minimum width=52pt,minimum height=13pt,inner sep=1pt,
+                  font=\fontsize{7}{8}\fontfamily{phv}\bfseries},
+    flow/.style={->,draw=ink,line width=0.6pt},
+    note/.style={inner sep=0.5pt,font=\fontsize{6}{7}\fontfamily{phv}\itshape},
+  ]
+  \definecolor{ink}{RGB}{34,34,34}
+  \definecolor{lifegray}{RGB}{165,165,165}
+  \definecolor{entfill}{gray}{0.80}
+  \definecolor{band}{gray}{0.95}
+  \def\Gi{\textit{G}\textsubscript{\textit{i}}}
+  \def\us{{\fontencoding{T1}\selectfont\_}}%
+
+  \def\xl{88}
+  \def\xa{113} \def\xb{171} \def\xc{229}
+  \def\ylog{9}  \def\yts{22} \def\ytd{35}
+  \def\ysoft{53} \def\ya{66} \def\yb{79} \def\yc{92}
+  \def\yrep{118}
+
+  \fill[band,rounded corners=2pt] (0,0) rectangle (252,42);
+  \fill[band,rounded corners=2pt] (0,45) rectangle (252,99);
+
+  \node[sec] at (2,\ylog) {Recipient Raft log};
+  \node[rowlbl] at (\xl,\yts) {TXN\us{}START(\Gi)};
+  \node[rowlbl] at (\xl,\ytd) {TRANSFER\us{}DURABLE(\Gi)};
+  \node[entry]   at (\xa,\yts) {}; \node[entry]   at (\xa,\ytd) {};
+  \node[entry]   at (\xb,\yts) {}; \node[noentry] at (\xb,\ytd) {};
+  \node[entry]   at (\xc,\yts) {}; \node[noentry] at (\xc,\ytd) {};
+
+  \node[sec] at (2,\ysoft) {Soft state (flag)};
+  \node[rowlbl] at (\xl,\ya) {R\textsubscript{1} (leader)};
+  \node[rowlbl] at (\xl,\yb) {R\textsubscript{2}};
+  \node[rowlbl] at (\xl,\yc) {R\textsubscript{3}};
+  \node[flag] at (\xa,\ya) {}; \node[flag] at (\xa,\yb) {}; \node[noflag] at (\xa,\yc) {};
+  \node[noflag,dash pattern=on 1pt off 1pt] (l) at (\xb,\ya) {};
+  \node[flag] (r) at (\xb,\yb) {}; \node[noflag] at (\xb,\yc) {};
+  \draw[flow] (r.east) to[out=0,in=0,looseness=2.2]
+    node[note,right] {fetch} (l.east);
+  \node[noflag] at (\xc,\ya) {}; \node[noflag] at (\xc,\yb) {}; \node[noflag] at (\xc,\yc) {};
+
+  \node[rowlbl] at (80,\yrep) {Reply};
+  \node[reply] (d) at (\xa,\yrep) {DURABLE};
+  \node[reply] (t) at (\xb,\yrep) {TRANSFERRED};
+  \node[reply] (m) at (\xc,\yrep) {MISSING};
+  \foreach \x/\n in {\xa/d,\xb/t,\xc/m} \draw[flow] (\x,101) -- (\n.north);
+\end{tikzpicture}
