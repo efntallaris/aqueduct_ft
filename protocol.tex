@@ -1,7 +1,3 @@
-% Fault-tolerant migration protocol, organised around the replicated-log
-% entries. The previous text is in backups/design_old_protocol_text.tex.
-% \textcolor{red}{[OPEN: ...]} marks decisions that are still open; it prints in red.
-
 \subsection{Overview}
 \label{sec:migration-protocol}
 \label{sec:log-entries}
@@ -21,11 +17,10 @@ The protocol has a \emph{fast path}, which a migration follows when no node cras
 The progress of each group $G_i$ is recorded by four entries in the donor's and the recipient's replicated logs (Table~\ref{tab:log-entries}).
 Every replica learns how far the migration got by applying its log, so a newly elected leader resumes from the last committed entry instead of relying on in-memory state, which a crash loses.
 The protocol rests on one invariant:
-\emph{if \texttt{GI\_TRANSFER\_DURABLE($G_i$)} is committed, a majority of the recipient shard group holds the data of $G_i$.}
+\emph{if \texttt{TRANSFER\_DURABLE($G_i$)} is committed, a majority of the recipient shard group holds the data of $G_i$.}
 It holds because the recipient leader proposes this entry only after a majority of replicas have reported receiving the data (step~\mstep{5}).
 Since the fault model keeps a majority of the shard group available and any two majorities intersect, a newly elected leader that lacks part of the data can fetch it from its shard group before serving $G_i$.
 
-% Slot lifecycle figure, commented out for now.
 \iffalse
 \begin{figure*}[t]
   \centering
@@ -38,7 +33,7 @@ Since the fault model keeps a majority of the shard group available and any two 
 \end{figure*}
 \fi
 
-\subsection{Fast path}
+\subsection{Migrating replication protocol}
 \label{sec:migration-phases}
 \label{sec:intra-donor}
 \label{sec:leader-to-leader}
@@ -52,59 +47,29 @@ The donor leader appends \texttt{START($G_i$)} to its log and commits it, making
 It then collects the blocks of the slots of $G_i$ from its slot table (Section~\ref{sec:samm}) and registers them with its RNIC as the source of the transfer, unless they are already registered (e.g., at block allocation, or as part of one memory region that covers the whole address space).
 
 The \emph{leader-to-leader} phase follows.
-The donor leader sends a \texttt{prepare} RPC to the recipient leader, which allocates landing buffers for $G_i$, registers them as memory regions, appends \texttt{TXN\_START($G_i$)} to its log, and, once it commits, replies with their addresses, sizes, and RDMA access keys (RKeys)~(step~\mstep{2}).
-On this reply, the donor leader redirects new writes for $G_i$ to the recipient, lets the writes to $G_i$ that are already in progress finish, and applies no further writes to $G_i$.
+The donor leader sends a \texttt{prepare} RPC to the recipient leader, which allocates landing buffers for $G_i$, registers them as memory regions, appends \texttt{TXN\_START($G_i$)} to its log, and, once it commits, replies with these memory regions, namely their addresses, sizes, and RDMA access keys (RKeys)~(step~\mstep{2}).
+The allocation and registration can also happen out of the critical path, before the \texttt{prepare} arrives, so that the recipient only reports memory regions that are already registered.
+From this point, writes to $G_i$ are directed to the recipient shard group.
+The donor leader lets the writes to $G_i$ that are already in progress finish and applies no further writes to $G_i$.
 Every write that reaches the recipient therefore finds \texttt{TXN\_START($G_i$)} committed, so recipient replicas keep tombstones for it, and the donor's copy of $G_i$ no longer changes during the transfer.
 Using these keys, the donor leader writes the data of $G_i$ directly into the landing buffers with one-sided RDMA writes, which do not involve the recipient's CPU, and then sends an \texttt{RDMA\_DONE} RPC to the recipient leader~(step~\mstep{3}).
 
 The \emph{intra-recipient} phase starts on \texttt{RDMA\_DONE}.
 Once a majority of replicas, counting the leader, hold the data and the leader's index update has finished~(step~\mstep{5}),
-the leader appends \texttt{GI\_TRANSFER\_DURABLE($G_i$)} to its replicated log~(step~\mstep{6}).
+the leader appends \texttt{TRANSFER\_DURABLE($G_i$)} to its replicated log~(step~\mstep{6}).
 
 Finally, the recipient leader notifies the donor leader that $G_i$ is complete, repeating the notification until the donor acknowledges it, and the donor leader appends and commits \texttt{DONE($G_i$)}~(step~\mstep{7}).
-Ownership of the slots moves per group, not once per transaction. When \texttt{GI\_TRANSFER\_DURABLE($G_i$)} commits, clients stop double reads for $G_i$ and the recipient shard group alone serves $G_i$, while later groups of the same transaction may still be migrating.
-
-\subsection{Chain replication}
-\label{sec:chain-replication}
-
-% Chain replication text, commented out for now.
-\textcolor{red}{TBD: Chain replication}
-% \textcolor{green!50!black}{The recipient leader runs two activities in parallel: its own index update of $G_i$ (Section~\ref{sec:index_updating}), and chain replication of the data over RDMA.
-% The leader orders the live replicas into a chain and writes the data to the first one. Each replica that has received the data forwards it to its successor and signals it with a \texttt{CHAIN\_DONE} message, and reports the buffers it holds in its replies to the leader's log-replication messages~(step~\mstep{4}).
-% The chain is set up before the migration starts, off its critical path.
-% The recipient leader opens an RDMA connection to every follower and registers landing buffers on each of them, not only on the first replica of the chain.
-% Each transaction gets its own transaction ID and its own landing buffers on every replica, so the groups of concurrent donors never overwrite each other.
-% Every replica reports the data of $G_i$ as soon as it lands, not only the last replica of the chain, so the leader learns that a majority holds $G_i$ once $f$ followers have reported, without waiting for the rest of the chain.}
-% \textcolor{green!50!black}{Replication to this majority is synchronous. The remaining replicas receive the data asynchronously from the ongoing chain.}
-
-% \textcolor{green!50!black}{A recipient replica sets its \emph{transferred} flag for $G_i$ (Section~\ref{sec:failure-handling}) only after the whole transfer has landed, that is, after it receives \texttt{RDMA\_DONE} from the donor or \texttt{CHAIN\_DONE} from its predecessor, because one-sided RDMA writes do not notify it.}
-
-% \paragraph{\textcolor{green!50!black}{Chain repair.}}
-% \textcolor{green!50!black}{A follower can fail while the chain is running.
-% The recipient leader notices this when its RDMA write to the first replica of the chain, or the \texttt{CHAIN\_DONE} message that follows it, fails.
-% It then drops that replica from the chain and sends the same landing buffers again to the next live replica.
-% This needs no new connection or registration, because the leader already holds both for every follower, and the leader keeps the landing buffers until the new transfer succeeds, so they cannot be freed while they are still being sent.
-% A follower that is already dead when the chain is built is excluded in the same way, so the chain is wired over the live replicas only and its first replica is always alive.
-% Without this, a newly elected leader could build its first chain with the dead old leader at its head.
-% Chain repair never declares $G_i$ durable on a timeout: the leader counts a replica as holding $G_i$ only when that replica reports it.
-% If no majority can be reached, \texttt{GI\_TRANSFER\_DURABLE($G_i$)} never commits, and the migration fails visibly instead of silently losing data.}
-% \textcolor{red}{[OPEN: The implementation repairs the chain only when its first replica fails. A failure further down the chain is not yet repaired.]}
-
-% \textcolor{green!50!black}{A replica that stalls the chain is removed by chain repair (Algorithm~\ref{alg:recipient-node-recovery}).
-% A transfer from the donor that makes no progress means that the donor has failed, not a follower, so the recipient does not repair the chain, which would not help. Donor recovery sends the data again instead.}
+Ownership of the slots moves per group, not once per transaction. When \texttt{TRANSFER\_DURABLE($G_i$)} commits, clients stop double reads for $G_i$ and the recipient shard group alone serves $G_i$, while later groups of the same transaction may still be migrating.
 
 \subsection{Index update}
 \label{sec:index_updating}
 
 The KVS keeps a dictionary-like index with pointers to the key-value pairs, which must be updated to point to the new memory locations.
-This \emph{index update} runs on dedicated background threads with lower scheduling priority, to minimize interference with client-serving threads, and uses fine-grained locking for dictionary accesses, since these threads run concurrently with client threads.
+This \emph{index update} runs on dedicated background threads, to minimize interference with client-serving threads, and uses fine-grained locking for dictionary accesses, since these threads run concurrently with client threads.
 
 Because new writes for $G_i$ go to the recipient during the migration, the transferred data may contain older versions of these keys. The index update detects and discards such stale entries, keeping only the most recent value of each key.
 A key that a client deletes at the recipient during the migration could come back when the index update inserts the donor's older copy of it.
 To prevent this, recipient replicas keep a tombstone for every key that is deleted while \texttt{TXN\_START($G_i$)} is active, and the index update skips keys that have a tombstone. The tombstones of $G_i$ are removed once its index update finishes.
-
-% \paragraph{Running the index update alongside client commands.}
-% The index update of $G_i$ takes much longer than a client command, so the recipient leader does not run it as part of applying a log entry, which would stall every command behind it. It runs on the background threads, before \texttt{GI\_TRANSFER\_DURABLE($G_i$)} is appended, while the leader keeps applying client reads and writes in log order. \OurImplementation{} tracks the two with separate pointers: Raft's \texttt{lastApplied} for client commands, and a migration pointer that advances when the index update of $G_i$ finishes. Running both at once is safe because the index update commutes with the client writes applied meanwhile: stale-entry detection and tombstones yield the same final state in either order. Only when the migration pointer has passed $G_i$ and a majority holds the data does the leader append \texttt{GI\_TRANSFER\_DURABLE($G_i$)}, so a committed \texttt{GI\_TRANSFER\_DURABLE($G_i$)} implies that the leader serves correct values for $G_i$ without double reads.
 
 \subsection{Serving client requests during migration}
 \label{sec:serving-during-migration}
@@ -114,7 +79,7 @@ As in the underlying replication protocol, all client requests for $G_i$ are ser
 Once \texttt{TXN\_START($G_i$)} is committed (step~\mstep{2}), writes to its slots are redirected to the recipient shard group, processed by the recipient leader, and committed through its replicated log.
 The donor applies no further writes to $G_i$, so no write-back or reconciliation is needed after the migration, and stale-entry detection and tombstones keep the migrated data from overwriting these writes.
 As in Fulva~\cite{fulva}, writes go to the recipient and reads use double reads during the migration.
-Until \texttt{GI\_TRANSFER\_DURABLE($G_i$)} commits, clients use double reads, so that a read never depends on data the recipient may not yet hold.
+Until \texttt{TRANSFER\_DURABLE($G_i$)} commits, clients use double reads, so that a read never depends on data the recipient may not yet hold.
 Once it commits, the recipient shard group serves $G_i$ on its own. By the durability invariant, any newly elected leader can obtain the data from its shard group.
 
 \subsection{Failure handling}
@@ -125,52 +90,65 @@ A crash erases everything a node holds only in memory, such as landing buffers a
 \OurImplementation{} therefore recovers from two kinds of state.
 \emph{Durable state} is the set of committed log entries of Table~\ref{tab:log-entries}.
 It tells a newly elected leader which groups are in flight, namely those with a start entry but no matching done entry.
-\emph{Soft state} records which replicas currently hold the data of a group.
+\emph{Soft state} records which replicas currently hold the data of a group, and the status of the chain that transfers it.
 It is not logged, but a leader can rebuild it from the live replicas.
 Recovery always moves forward. A new leader resumes each group in flight from its last committed entry and never rolls it back.
 Sending the data of a group again is harmless, because the index update discards entries that are not newer than what the recipient holds.
 
 \paragraph{Soft state.}
-Each recipient replica keeps a local \emph{transferred} flag for $G_i$.
-The replica reports the flag in every reply to the leader's log-replication messages.
-A newly elected recipient leader therefore knows from its own flag whether it holds the data, and it learns the flags of the other replicas within one round of log replication.
+Each recipient replica $R_j$ keeps a local flag $\texttt{TRANSFERRED}[R_j][G_i]$, which says that $R_j$ holds the whole of $G_i$.
+One-sided RDMA writes do not notify the replica they write to, so the flag is set by the message that follows them.
+The leader sets its flag when it receives \texttt{RDMA\_DONE($G_i$)} from the donor, and a follower sets its flag when it receives \texttt{CHAIN\_DONE($G_i$)} from its predecessor in the chain (Section~\ref{sec:chain-replication}).
+A leader that fetches $G_i$ from a replica sets its flag once the fetch completes.
+Each replica also records the status of the link to its successor in the chain, that is, whether the timeout for its successor has expired or its RDMA connection to it has broken (Section~\ref{sec:chain-replication}).
+Each replica reports its flag and the status of its link in every reply to the leader's \texttt{AppendEntries} messages, so the soft state needs no extra messages.
+The leader uses the link status to repair the chain, and it reads the flags in two places. It commits \texttt{TRANSFER\_DURABLE($G_i$)} once a majority has set its flag, and it answers \texttt{QUERY\_STATE($G_i$)} from its own flag and those of the other replicas.
+A newly elected recipient leader therefore knows from its own flag whether it holds the data, and it learns the flags of the other replicas within one round of \texttt{AppendEntries}.
 A replica that crashes restarts with the flag cleared, since its buffers were in memory, so a flag never claims data that no longer exists.
 
-% each algorithm is input next to the paragraph that describes it
 \input{pseudocodes/migration_donor_recovery.tex}
+\input{pseudocodes/migration_recipient_leader_recovery.tex}
+\iffalse
+\begin{figure}[t]
+  \centering
+  \resizebox{0.9\columnwidth}{!}{\input{figs/query_state.tex}}
+  \caption{Reply of the recipient leader to \texttt{QUERY\_STATE($G_i$)}.
+  Gray boxes are committed log entries, and filled squares are set \texttt{TRANSFERRED} flags.}
+  \label{fig:query_state}
+\end{figure}
+\fi
 \paragraph{Donor recovery.}
 A newly elected donor leader resumes each group that has \texttt{START($G_i$)} but no \texttt{DONE($G_i$)} (Algorithm~\ref{alg:donor-recovery}).
-It asks the recipient leader for the state of the group with a \texttt{QUERY\_STATE($G_i$)} RPC, and the recipient answers from its log and from the transferred flags.
-The reply is \texttt{GI\_DONE} if \texttt{GI\_TRANSFER\_DURABLE($G_i$)} is committed, \texttt{TRANSFERRED} if the flag of some live replica is set, and \texttt{MISSING} otherwise.
-The donor then commits \texttt{DONE($G_i$)} on \texttt{GI\_DONE}, waits for the recipient to complete the group on \texttt{TRANSFERRED}, and transfers the group again, starting from \texttt{prepare}, on \texttt{MISSING}.
-Only \texttt{GI\_DONE} is final, because it comes from the log.
-The other two replies come from soft state and can become stale, but neither error is harmful.
-A \texttt{MISSING} reply that underestimates the recipient's progress only causes an extra transfer.
+It asks the recipient leader for the state of the group with a \texttt{QUERY\_STATE($G_i$)} RPC, and the recipient answers from its soft state and its log.
+The reply is \texttt{DURABLE} if \texttt{TRANSFER\_DURABLE($G_i$)} is committed.
+Otherwise, the reply is \texttt{TRANSFERRED} if the recipient leader holds the data, that is, if its own flag $\texttt{TRANSFERRED}[R_j][G_i]$ is set.
+If it does not, it asks the other replicas, fetches the data from one whose flag is set, and then replies \texttt{TRANSFERRED}.
+If no live replica holds the data, the reply is \texttt{MISSING}.
+The donor commits \texttt{DONE($G_i$)} on \texttt{DURABLE}.
+On \texttt{MISSING}, it first transfers the group again, starting from \texttt{prepare}.
+On any reply other than \texttt{DURABLE}, it keeps sending \texttt{QUERY\_STATE($G_i$)} until it receives \texttt{DURABLE}.
 If the replicas holding the data crash after a \texttt{TRANSFERRED} reply, the recipient leader asks for the data again, and the donor can always serve it, because it keeps its copy of $G_i$ until \texttt{DONE($G_i$)} commits.
 Every new transfer uses newly allocated landing buffers with new RKeys, so late RDMA writes from an earlier attempt fail instead of overwriting them.
 
-\input{pseudocodes/migration_recipient_leader_recovery.tex}
 \paragraph{Recipient recovery.}
-A newly elected recipient leader resumes each group that has \texttt{TXN\_START($G_i$)} but no \texttt{GI\_TRANSFER\_DURABLE($G_i$)} (Algorithm~\ref{alg:recipient-leader-recovery}).
-A group whose \texttt{GI\_TRANSFER\_DURABLE($G_i$)} is committed is complete on the recipient, but the old leader may have crashed before telling the donor.
-The new leader therefore notifies the donor again for each such group.
-Repeating the notification is harmless, because the donor ignores it for a group that already has \texttt{DONE($G_i$)}.
-If the notification is lost as well, the donor still learns the outcome from the reply to its \texttt{QUERY\_STATE($G_i$)}.
+A newly elected recipient leader resumes each group that has \texttt{TXN\_START($G_i$)} but no \texttt{TRANSFER\_DURABLE($G_i$)} (Algorithm~\ref{alg:recipient-leader-recovery}).
+A group whose \texttt{TRANSFER\_DURABLE($G_i$)} is committed is complete on the recipient, but the old leader may have crashed before telling the donor.
+The new leader does nothing for such a group, because the donor learns the outcome from the reply to its \texttt{QUERY\_STATE($G_i$)}.
 For a group in flight, the leader must first hold the data itself.
 If its transferred flag is not set, it fetches the data from a replica whose flag is set.
 If no live replica holds the data, it asks the donor to send it again, which is the usual case when the crash interrupted a transfer, since the followers had not yet received the whole group.
-The leader then resumes the intra-recipient phase. It replicates the data to the replicas that lack it, updates its index, and commits \texttt{GI\_TRANSFER\_DURABLE($G_i$)} once a majority holds the data.
+The leader then resumes the intra-recipient phase. It replicates the data to the replicas that lack it, updates its index, and commits \texttt{TRANSFER\_DURABLE($G_i$)} once a majority holds the data.
 It obtains the data before it waits for a majority, because if every replica that held the data has crashed, no majority can form until the data arrives again.
 
 \paragraph{Timeouts.}
 Failures are detected through timeouts or broken connections (Section~\ref{sec:fault-model}), so every wait that depends on another node has a timeout.
-A donor leader that gets no reply to \texttt{QUERY\_STATE($G_i$)}, or no \texttt{GI\_DONE} after a \texttt{TRANSFERRED} reply or a new transfer, queries the recipient leader again, finding the new leader if it has changed.
+A donor leader that gets no \texttt{DURABLE} after sending \texttt{RDMA\_DONE($G_i$)} sends \texttt{QUERY\_STATE($G_i$)} to the recipient leader, finding the new leader if it has changed.
+A donor leader that gets no reply to \texttt{QUERY\_STATE($G_i$)}, or no \texttt{DURABLE} after a \texttt{TRANSFERRED} reply or a new transfer, queries the recipient leader again.
 A recipient leader that asked for the data and gets no \texttt{RDMA\_DONE} asks again.
 A newly elected recipient leader waits one heartbeat interval for the flags of the replicas and treats a replica that does not answer as lacking the data.
-Timeouts affect only liveness, never safety.
 Every action taken on a timeout is a query or a new transfer, both of which can be repeated safely, and every decision comes from committed log entries.
 A timeout that fires too early therefore costs at most an extra transfer, and one that fires too late only delays recovery.
-% Fig. 2 (recipient leader recovery), commented out for now.
+
 \iffalse
 Fig.~\ref{fig:recipient_recovery} shows a recipient leader crash: B1 crashes after receiving $G_i$ but before replicating it, so the new leader B2 finds $G_i$ in flight without holding its data, obtains it again from the donor, and completes the migration.
 
@@ -179,25 +157,45 @@ Fig.~\ref{fig:recipient_recovery} shows a recipient leader crash: B1 crashes aft
   \input{figs/2.tex}
   \caption{Recovery of group $G_i$ after the recipient leader crashes.
   (a)~B2 is elected leader.
-  (b)~Its log holds \texttt{TXN\_START($G_i$)} but not \texttt{GI\_TRANSFER\_DURABLE($G_i$)}, and B2 lacks the data.
+  (b)~Its log holds \texttt{TXN\_START($G_i$)} but not \texttt{TRANSFER\_DURABLE($G_i$)}, and B2 lacks the data.
   (c--d)~The donor resends $G_i$ to B2.
   (e)~B2 replicates it to B3, reaching a majority.
-  (f)~B2 commits \texttt{GI\_TRANSFER\_DURABLE($G_i$)}.
+  (f)~B2 commits \texttt{TRANSFER\_DURABLE($G_i$)}.
   (g)~The donor commits \texttt{DONE($G_i$)}.}
   \label{fig:recipient_recovery}
 \end{figure}
 \fi
 
-% Guarantees paragraph, commented out for now.
-\iffalse
-\paragraph{Guarantees.}
-Together, these rules provide the three guarantees of Section~\ref{sec:migration-protocol}.
-(i)~\emph{No committed write is lost.}
-From the start of the migration of $G_i$, writes to $G_i$ are committed only through the recipient's replicated log, and stale-entry detection and tombstones keep the migrated data from overwriting them.
-(ii)~\emph{No read observes partial data.}
-Double reads never depend on the recipient alone until \texttt{GI\_TRANSFER\_DURABLE($G_i$)} commits, and from then on the durability invariant guarantees that a majority of the recipient shard group holds the data.
-(iii)~\emph{Every migration completes.}
-Every group in flight has a committed start entry without a matching done entry in the donor's or the recipient's log, and a newly elected leader of either shard group resumes it from that entry.
-Since sending the data again is harmless, every group eventually reaches \texttt{DONE($G_i$)}.
-\fi
-% \textcolor{red}{[OPEN: item 10: coordinator failure, and both leaders failing at once.]}
+\subsection{Chain replication}
+\label{sec:chain-replication}
+
+The recipient leader replicates the data of $G_i$ to its followers with chain replication over RDMA, in parallel with its own index update of $G_i$ (Section~\ref{sec:index_updating}).
+The leader orders the live replicas into a chain and writes the data to the first one.
+Each replica that has received the data forwards it to its successor and signals it with a \texttt{CHAIN\_DONE} message~(step~\mstep{4}).
+The chain is set up before the migration starts, off its critical path.
+The recipient leader opens an RDMA connection to every follower and registers landing buffers on each of them, and the followers connect to each other, so any replica can forward the data to any other.
+Each transaction gets its own transaction ID and its own landing buffers on every replica, so the groups of concurrent donors never overwrite each other.
+
+\paragraph{Transfer state.}
+The leader learns the state of the transfer without extra messages.
+Every replica piggybacks it on its replies to the leader's \texttt{AppendEntries} messages, reporting which landing buffers of $G_i$ it holds and whether its transferred flag is set.
+A replica sets the flag only after the whole of $G_i$ has landed, that is, after it receives \texttt{RDMA\_DONE} from the donor or \texttt{CHAIN\_DONE} from its predecessor, because one-sided RDMA writes do not notify it.
+The leader therefore knows at any time how far the data has travelled down the chain.
+It learns that a majority holds $G_i$ once $f$ followers have reported it, without waiting for the rest of the chain.
+Replication to this majority is synchronous. The remaining replicas receive the data asynchronously from the ongoing chain.
+
+\paragraph{Chain repair.}
+Each replica in the chain keeps a timeout for its successor.
+The timeout starts when the replica forwards $G_i$ to its successor, and stops when the successor acknowledges that it holds $G_i$.
+If the timeout expires, the replica reports it to the leader in its next reply to the leader's \texttt{AppendEntries} messages.
+The leader then moves the successor to the end of the chain.
+It tells the closest replica before it that holds $G_i$ to forward the data to the next replica in the new order.
+This is the leader itself if no follower before the moved replica holds $G_i$.
+The data does not change during the transfer, so the forwarding replica sends the whole of $G_i$ again and needs no record of what it sent before.
+A replica whose RDMA connection to its successor breaks reports it in the same way, without waiting for the timeout, and the leader moves that successor to the end of the chain as well.
+A replica that crashed and rejoins reports a cleared flag, and the leader adds it at the end of the chain.
+
+Chain repair affects only liveness.
+The leader counts a replica as holding $G_i$ only when that replica reports it, so a timeout never makes \texttt{TRANSFER\_DURABLE($G_i$)} commit early.
+A timeout that fires too early only moves a slow replica to the end of the chain, where it still receives the data.
+If no majority can be reached, \texttt{TRANSFER\_DURABLE($G_i$)} never commits, and the migration fails visibly instead of silently losing data.

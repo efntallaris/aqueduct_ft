@@ -1,13 +1,9 @@
-% Fig. -- slot-aware memory organization (two panels).
-% Each panel: donor memory -> RDMA descriptors (WQEs) -> recipient memory.
-% Same conventions as figs/1.tex: 252-unit grid scaled to \columnwidth,
-% y in pt growing downwards, 7.5pt Helvetica, grayscale.
 \begin{tikzpicture}[x={\columnwidth/252},y=-1pt,
     font=\fontsize{7.5}{9}\fontfamily{phv}\selectfont,
     >={Stealth[length=3.2pt,width=2.6pt]},
     cell/.style={draw=ink,line width=0.4pt},
-    mig/.style={cell,fill=ink!80},          % the slot being migrated
-    oth/.style={cell,fill=ink!15},          % other slots
+    mig/.style={cell,fill=ink!80},
+    oth/.style={cell,fill=ink!15},
     free/.style={cell,fill=white},
     mr/.style={draw=ink,line width=0.6pt,dash pattern=on 1.6pt off 1.1pt,rounded corners=1pt},
     desc/.style={draw=ink,line width=0.5pt,fill=white,rounded corners=1pt,
@@ -20,7 +16,6 @@
   ]
   \definecolor{ink}{RGB}{34,34,34}
 
-  % legend
   \node[anchor=base,inner sep=0pt] at (126,0) {%
     \tikz[baseline=0pt]\filldraw[mig] (0,0) rectangle (6pt,6pt);\hspace{2pt}migrating slot\hspace{8pt}%
     \tikz[baseline=0pt]\filldraw[oth] (0,0) rectangle (6pt,6pt);\hspace{2pt}other slots\hspace{8pt}%

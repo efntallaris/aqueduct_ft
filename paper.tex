@@ -1,8 +1,6 @@
-% USENIX template (usenix2019_v3.sty, from
-% https://www.usenix.org/conferences/author-resources/paper-templates).
-% The previous IEEEtran version is in backups/paper_ieee_before_usenix.tex.
 \documentclass[letterpaper,twocolumn,10pt]{article}
-\usepackage{usenix2019_v3}   % also loads cite, xcolor, hyperref, microtype, Times
+\usepackage{float}
+\usepackage{usenix2019_v3}
 
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{graphicx}
@@ -11,27 +9,22 @@
 \usepackage{booktabs}
 \usepackage{tikz}
 \usetikzlibrary{arrows.meta,decorations.pathreplacing}
-% circled step number, shared by Fig.~1 and the protocol text
-\newcommand{\mstep}[1]{\tikz[baseline={([yshift=-0.34em]s.center)}]\node[circle,fill=black!85,text=white,inner sep=0pt,minimum size=8.4pt,text height=4.65pt,text depth=0.6pt,font=\fontsize{6.5}{6.5}\fontfamily{phv}\bfseries\selectfont](s){\ifnum#1=1 \kern0.72pt\fi#1};}% the glyph 1 is optically left-heavy
-\usepackage{float} % for [H] float placement specifier
-\usepackage{placeins} % \FloatBarrier: keep main-text floats before the references
-% let tall floats (the pseudocode) sit at the top of a column with text below them
+\newcommand{\mstep}[1]{\tikz[baseline={([yshift=-0.34em]s.center)}]\node[circle,fill=black!85,text=white,inner sep=0pt,minimum size=8.4pt,text height=4.65pt,text depth=0.6pt,font=\fontsize{6.5}{6.5}\fontfamily{phv}\bfseries\selectfont](s){\ifnum#1=1 \kern0.72pt\fi#1};}%
+\usepackage{placeins}
 \renewcommand{\topfraction}{0.9}
-\setcounter{topnumber}{1} % one float at the top of each column, so figures sit side by side
-% no single lines stranded at the top or bottom of a column
+\setcounter{topnumber}{1}
 \widowpenalty=10000
 \clubpenalty=10000
 \renewcommand{\textfraction}{0.07}
 \renewcommand{\floatpagefraction}{0.8}
-% no extra space above run-in \paragraph headings (default is 3.25ex plus 1ex)
+\setlength{\abovecaptionskip}{4pt}
 \makeatletter
 \renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}{\z@}{-1em}{\normalfont\normalsize\bfseries}}
 \makeatother
 
 \usepackage{algorithm}
-\usepackage{algpseudocode} % from algorithmicx
+\usepackage{algpseudocode}
 
-% --- Pseudocode visual helpers ---
 \newcommand{\phasesep}[1]{\Statex \textcolor{gray}{\hrulefill\;\textit{\small #1}\;\hrulefill}}
 \newcommand{\msg}[1]{\textsc{#1}}
 \newcommand{\fn}[1]{\textnormal{\textsc{#1}}}
@@ -42,10 +35,8 @@
 
 \newcommand{\OurImplementation}{Aqueduct}
 
-% don't print a date
 \date{}
 
-% USENIX titles: bold, 14pt
 \title{\Large \bf Paper Title}
 
 \author{
@@ -54,11 +45,7 @@ First Institution
 \and
 {\rm Second Author}\\
 Second Institution
-% copy the following lines to add more authors
-% \and
-% {\rm Name}\\
-% Institution
-} % end author
+}
 
 \maketitle
 
@@ -73,5 +60,5 @@ Abstract goes here. USENIX asks for no more than 200 words, preferably closer to
 \FloatBarrier
 \bibliographystyle{plain}
 \bibliography{paper}
-\input{notes.tex}  % working notes; remove before submission
+\input{notes.tex}
 \end{document}
