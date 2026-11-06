@@ -61,6 +61,16 @@ the leader appends \texttt{TRANSFER\_DURABLE($G_i$)} to its replicated log~(step
 Finally, the recipient leader notifies the donor leader that $G_i$ is complete, repeating the notification until the donor acknowledges it, and the donor leader appends and commits \texttt{DONE($G_i$)}~(step~\mstep{7}).
 Ownership of the slots moves per group, not once per transaction. When \texttt{TRANSFER\_DURABLE($G_i$)} commits, clients stop double reads for $G_i$ and the recipient shard group alone serves $G_i$, while later groups of the same transaction may still be migrating.
 
+% \iffalse
+\begin{figure}[t]
+  \centering
+  \resizebox{0.9\columnwidth}{!}{\input{figs/query_state.tex}}
+  \caption{Reply of the recipient leader to \texttt{QUERY\_STATE($G_i$)}.
+  Gray boxes are committed log entries, and filled squares are set \texttt{TRANSFERRED} flags.}
+  \label{fig:query_state}
+\end{figure}
+% \fi
+
 \subsection{Index update}
 \label{sec:index_updating}
 
@@ -87,18 +97,18 @@ Once it commits, the recipient shard group serves $G_i$ on its own. By the durab
 \label{sec:correctness}
 
 A crash erases everything a node holds only in memory, such as landing buffers and the data in them, chains, and in-flight RDMA writes.
-\OurImplementation{} therefore recovers from two kinds of state.
+\OurImplementation{} uses two kinds of state for recovery.
 \emph{Durable state} is the set of committed log entries of Table~\ref{tab:log-entries}.
-It tells a newly elected leader which groups are in flight, namely those with a start entry but no matching done entry.
+% It tells a newly elected leader which groups are in flight, namely those with a start entry but no matching done entry.
 \emph{Soft state} records which replicas currently hold the data of a group, and the status of the chain that transfers it.
-It is not logged, but a leader can rebuild it from the live replicas.
-Recovery always moves forward. A new leader resumes each group in flight from its last committed entry and never rolls it back.
+This state is in-memory of each node and upon crash, the leader can rebuild it from the live replicas.
+Recovery always moves forward. Since a state of a slot is on two replica groups, aborting a transaction would be far more complex. A new leader resumes each group in flight from its last committed entry and never rolls it back.
 Sending the data of a group again is harmless, because the index update discards entries that are not newer than what the recipient holds.
 
 \paragraph{Soft state.}
-Each recipient replica $R_j$ keeps a local flag $\texttt{TRANSFERRED}[R_j][G_i]$, which says that $R_j$ holds the whole of $G_i$.
+Each recipient replica $R_j$ keep in-memory flags to track the status of the group. A local flag $\texttt{TRANSFERRED}[R_j][G_i]$, indicates that $R_j$ has all blocks of group $G_i$.
 One-sided RDMA writes do not notify the replica they write to, so the flag is set by the message that follows them.
-The leader sets its flag when it receives \texttt{RDMA\_DONE($G_i$)} from the donor, and a follower sets its flag when it receives \texttt{CHAIN\_DONE($G_i$)} from its predecessor in the chain (Section~\ref{sec:chain-replication}).
+The leader sets its flag when it receives \texttt{RDMA\_DONE($G_i$)} from the donor, and a follower sets its flag when it receives \texttt{CHAIN\_DONE($G_i$)} from its predecessor in the chain (Section~\ref{sec:chain-replication}) (Fig. \ref{fig:migration_flow}).
 A leader that fetches $G_i$ from a replica sets its flag once the fetch completes.
 Each replica also records the status of the link to its successor in the chain, that is, whether the timeout for its successor has expired or its RDMA connection to it has broken (Section~\ref{sec:chain-replication}).
 Each replica reports its flag and the status of its link in every reply to the leader's \texttt{AppendEntries} messages, so the soft state needs no extra messages.
@@ -108,15 +118,6 @@ A replica that crashes restarts with the flag cleared, since its buffers were in
 
 \input{pseudocodes/migration_donor_recovery.tex}
 \input{pseudocodes/migration_recipient_leader_recovery.tex}
-\iffalse
-\begin{figure}[t]
-  \centering
-  \resizebox{0.9\columnwidth}{!}{\input{figs/query_state.tex}}
-  \caption{Reply of the recipient leader to \texttt{QUERY\_STATE($G_i$)}.
-  Gray boxes are committed log entries, and filled squares are set \texttt{TRANSFERRED} flags.}
-  \label{fig:query_state}
-\end{figure}
-\fi
 \paragraph{Donor recovery.}
 A newly elected donor leader resumes each group that has \texttt{START($G_i$)} but no \texttt{DONE($G_i$)} (Algorithm~\ref{alg:donor-recovery}).
 It asks the recipient leader for the state of the group with a \texttt{QUERY\_STATE($G_i$)} RPC, and the recipient answers from its soft state and its log.
@@ -195,7 +196,5 @@ The data does not change during the transfer, so the forwarding replica sends th
 A replica whose RDMA connection to its successor breaks reports it in the same way, without waiting for the timeout, and the leader moves that successor to the end of the chain as well.
 A replica that crashed and rejoins reports a cleared flag, and the leader adds it at the end of the chain.
 
-Chain repair affects only liveness.
 The leader counts a replica as holding $G_i$ only when that replica reports it, so a timeout never makes \texttt{TRANSFER\_DURABLE($G_i$)} commit early.
-A timeout that fires too early only moves a slow replica to the end of the chain, where it still receives the data.
-If no majority can be reached, \texttt{TRANSFER\_DURABLE($G_i$)} never commits, and the migration fails visibly instead of silently losing data.
+% A timeout that fires too early only moves a slow replica to the end of the chain, where it still receives the data.
