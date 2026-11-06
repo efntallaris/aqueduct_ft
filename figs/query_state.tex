@@ -50,9 +50,16 @@
     node[note,right] {fetch} (l.east);
   \node[noflag] at (\xc,\ya) {}; \node[noflag] at (\xc,\yb) {}; \node[noflag] at (\xc,\yc) {};
 
-  \node[rowlbl] at (80,\yrep) {Reply};
-  \node[reply] (d) at (\xa,\yrep) {DURABLE};
-  \node[reply] (t) at (\xb,\yrep) {TRANSFERRED};
-  \node[reply] (m) at (\xc,\yrep) {MISSING};
-  \foreach \x/\n in {\xa/d,\xb/t,\xc/m} \draw[flow] (\x,101) -- (\n.north);
+  \node[rowlbl] at (80,\yrep) {QUERY\us{}STATE(\Gi) Reply};
+  \node[reply] at (\xa,\yrep) {DURABLE};
+  \node[reply] at (\xb,\yrep) {TRANSFERRED};
+  \node[reply] at (\xc,\yrep) {MISSING};
+
+  \def\keyb#1{\tikz[baseline=-2pt]\node[#1,minimum width=12pt,minimum height=5.5pt]{};\hspace{3pt}}
+  \def\keyf#1{\tikz[baseline=-2pt]\node[#1,minimum size=5.5pt]{};\hspace{3pt}}
+  \node[inner sep=0pt,anchor=base,font=\fontsize{6.5}{7.5}\fontfamily{phv}\selectfont] at (126,140) {%
+    \keyb{entry}committed\hspace{8pt}%
+    \keyb{noentry}uncommitted\hspace{8pt}%
+    \keyf{flag}transferred \Gi\hspace{8pt}%
+    \keyf{noflag}not yet transferred \Gi};
 \end{tikzpicture}

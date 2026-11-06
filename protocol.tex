@@ -65,8 +65,7 @@ Ownership of the slots moves per group, not once per transaction. When \texttt{T
 \begin{figure}[t]
   \centering
   \resizebox{0.9\columnwidth}{!}{\input{figs/query_state.tex}}
-  \caption{Reply of the recipient leader to \texttt{QUERY\_STATE($G_i$)}.
-  Gray boxes are committed log entries, and filled squares are set \texttt{TRANSFERRED} flags.}
+  \caption{The three states a group $G_i$ can be in at the recipient, and the reply to a \texttt{QUERY\_STATE($G_i$)} to the donor leader.}
   \label{fig:query_state}
 \end{figure}
 % \fi
@@ -96,6 +95,9 @@ Once it commits, the recipient shard group serves $G_i$ on its own. By the durab
 \label{sec:failure-handling}
 \label{sec:correctness}
 
+\input{pseudocodes/migration_donor_recovery.tex}
+\input{pseudocodes/migration_recipient_leader_recovery.tex}
+
 A crash erases everything a node holds only in memory, such as landing buffers and the data in them, chains, and in-flight RDMA writes.
 \OurImplementation{} uses two kinds of state for recovery.
 \emph{Durable state} is the set of committed log entries of Table~\ref{tab:log-entries}.
@@ -116,8 +118,6 @@ The leader uses the link status to repair the chain, and it reads the flags in t
 A newly elected recipient leader therefore knows from its own flag whether it holds the data, and it learns the flags of the other replicas within one round of \texttt{AppendEntries}.
 A replica that crashes restarts with the flag cleared, since its buffers were in memory, so a flag never claims data that no longer exists.
 
-\input{pseudocodes/migration_donor_recovery.tex}
-\input{pseudocodes/migration_recipient_leader_recovery.tex}
 \paragraph{Donor recovery.}
 A newly elected donor leader resumes each group that has \texttt{START($G_i$)} but no \texttt{DONE($G_i$)} (Algorithm~\ref{alg:donor-recovery}).
 It asks the recipient leader for the state of the group with a \texttt{QUERY\_STATE($G_i$)} RPC, and the recipient answers from its soft state and its log.

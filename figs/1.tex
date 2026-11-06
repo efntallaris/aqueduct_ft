@@ -88,7 +88,7 @@
   \draw[notify] (\Ah,279) -- (\Ao,279);
   \draw[notify] (\Ah,279) -- (\At,279);
 
-  \node[phaselbl,text=irink,fill=irfill] at (2,287) {Intra-recipient (slow path)};
+  \node[phaselbl,text=irink,fill=irfill] at (2,287) {Intra-recipient (async path)};
   \draw[bulk] (\Bt,308) -- node[lbl,above=2pt,align=center,font=\fontsize{7.5}{8}\fontfamily{phv}\selectfont] {chain\\replication}  (\Bh,308);
   \draw[msg]  (\Bt,322) -- node[lbl,above=2pt,fill=irfill,font=\fontsize{6.6}{7}\fontfamily{phv}\selectfont,inner sep=0.6pt] {CHAIN\us DONE}     (\Bh,322);
   \draw[msg]  (\Bh,327) -- (\Bt,327);
