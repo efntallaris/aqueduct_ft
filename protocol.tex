@@ -24,7 +24,7 @@ Since the fault model keeps a majority of the shard group available and any two 
 \iffalse
 \begin{figure*}[t]
   \centering
-  \input{figs/slot_lifecycle.tex}
+  \input{illustrations/slot_lifecycle.tex}
   \caption{Lifecycle of the slots of one group $G_i$.
   Dashed transitions are caused by a replicated-log entry and survive a crash. Solid ones are soft state.
   \texttt{START($G_i$)} and \texttt{DONE($G_i$)} are in the donor's log, the other entries in the recipient's.
@@ -40,31 +40,35 @@ Since the fault model keeps a majority of the shard group available and any two 
 \label{sec:intra-recipient}
 \label{sec:commit-completion}
 
-Fig.~\ref{fig:migration_flow} shows the fast path of one group.
-The transaction completes once every group has completed.
+Fig.~\ref{fig:migration_flow} shows the migration of one group.
 
-The donor leader appends \texttt{START($G_i$)} to its log and commits it, making the migration intent durable~(step~\mstep{1}).
-It then collects the blocks of the slots of $G_i$ from its slot table (Section~\ref{sec:samm}) and registers them with its RNIC as the source of the transfer, unless they are already registered (e.g., at block allocation, or as part of one memory region that covers the whole address space).
+The donor leader starts by appending \texttt{START($G_i$)} to its replication log and commits it, making the migration intent durable~(step~\mstep{1}).
+It then scans the blocks of the slots of $G_i$ from its slot table (Section~\ref{sec:samm}) and registers them with its RNIC, unless they are already registered out of the migration path (e.g.\ at block allocation, or as part of one memory region that covers the whole address space of the key-value store).
 
 The \emph{leader-to-leader} phase follows.
-The donor leader sends a \texttt{prepare} RPC to the recipient leader, which allocates landing buffers for $G_i$, registers them as memory regions, appends \texttt{TXN\_START($G_i$)} to its log, and, once it commits, replies with these memory regions, namely their addresses, sizes, and RDMA access keys (RKeys)~(step~\mstep{2}).
-The allocation and registration can also happen out of the critical path, before the \texttt{prepare} arrives, so that the recipient only reports memory regions that are already registered.
+The donor leader sends a \texttt{prepare} RPC to the recipient leader, which allocates the landing buffers for $G_i$ and registers them with its RNIC as memory regions.
+The allocation and the registration can also happen out of the migration path, before the \texttt{prepare} arrives, so that the recipient only reports memory regions that are already registered.
+Then \texttt{TXN\_START($G_i$)} is appended to the log, and once it commits, a reply with the memory regions, namely their addresses, sizes, and access keys (RKeys)~\cite{Infiniband-spec}, is sent to the donor leader~(step~\mstep{2}).
+
 From this point, writes to $G_i$ are directed to the recipient shard group.
 The donor leader lets the writes to $G_i$ that are already in progress finish and applies no further writes to $G_i$.
-Every write that reaches the recipient therefore finds \texttt{TXN\_START($G_i$)} committed, so recipient replicas keep tombstones for it, and the donor's copy of $G_i$ no longer changes during the transfer.
-Using these keys, the donor leader writes the data of $G_i$ directly into the landing buffers with one-sided RDMA writes, which do not involve the recipient's CPU, and then sends an \texttt{RDMA\_DONE} RPC to the recipient leader~(step~\mstep{3}).
+The blocks that are about to be transferred become immutable.
+This is also the point from which \OurImplementation{} keeps tombstones for deletes.
+Using the RDMA buffer pointers and the RKeys, the donor issues one-sided RDMA writes for the blocks of $G_i$ directly into the landing buffers, and then sends an \texttt{RDMA\_DONE} RPC to the recipient leader~(step~\mstep{3}).
 
-The \emph{intra-recipient} phase starts on \texttt{RDMA\_DONE}.
-Once a majority of replicas, counting the leader, hold the data and the leader's index update has finished~(step~\mstep{5}),
-the leader appends \texttt{TRANSFER\_DURABLE($G_i$)} to its replicated log~(step~\mstep{6}).
+The \emph{intra-recipient} phase starts on the \texttt{RDMA\_DONE} RPC.
+The recipient leader replicates the data of $G_i$ down the chain of its shard group (Section~\ref{sec:chain-replication}) and in parallel runs its own index update (Section~\ref{sec:index_updating}).
+Each replica that receives the data forwards it to its successor and signals the leader with a \texttt{CHAIN\_DONE} message~(step~\mstep{4}).
+Once a majority of replicas (counting the leader) hold the data and the leader's index update has finished~(step~\mstep{5}), the leader appends \texttt{TRANSFER\_DURABLE($G_i$)} to its log~(step~\mstep{6}).
 
-Finally, the recipient leader notifies the donor leader that $G_i$ is complete, repeating the notification until the donor acknowledges it, and the donor leader appends and commits \texttt{DONE($G_i$)}~(step~\mstep{7}).
-Ownership of the slots moves per group, not once per transaction. When \texttt{TRANSFER\_DURABLE($G_i$)} commits, clients stop double reads for $G_i$ and the recipient shard group alone serves $G_i$, while later groups of the same transaction may still be migrating.
+Finally, the recipient leader notifies the donor leader that $G_i$ has completed, and the donor leader appends \texttt{DONE($G_i$)} to its log~(step~\mstep{7}).
+When \texttt{TRANSFER\_DURABLE($G_i$)} commits, clients stop double reads for $G_i$ and the recipient shard group alone serves $G_i$.
+From this point it is safe to clean up the data of $G_i$ at the donor shard group, and any new leader in the recipient shard group can find the buffers of $G_i$ on at least a majority of the replicas.
 
 % \iffalse
 \begin{figure}[t]
   \centering
-  \resizebox{0.9\columnwidth}{!}{\input{figs/query_state.tex}}
+  \resizebox{0.9\columnwidth}{!}{\input{illustrations/query_state.tex}}
   \caption{The three states a group $G_i$ can be in at the recipient, and the reply to a \texttt{QUERY\_STATE($G_i$)} to the donor leader.}
   \label{fig:query_state}
 \end{figure}
@@ -73,23 +77,29 @@ Ownership of the slots moves per group, not once per transaction. When \texttt{T
 \subsection{Index update}
 \label{sec:index_updating}
 
-The KVS keeps a dictionary-like index with pointers to the key-value pairs, which must be updated to point to the new memory locations.
-This \emph{index update} runs on dedicated background threads, to minimize interference with client-serving threads, and uses fine-grained locking for dictionary accesses, since these threads run concurrently with client threads.
+The KVS keeps a dictionary-like index with pointers to the key-value pairs, which must be updated to point to the new memory locations once the data from the migration arrives.
+The \emph{index update} runs on background threads and uses fine-grained locking for dictionary accesses, to avoid interference with the threads that serve requests.
 
-Because new writes for $G_i$ go to the recipient during the migration, the transferred data may contain older versions of these keys. The index update detects and discards such stale entries, keeping only the most recent value of each key.
-A key that a client deletes at the recipient during the migration could come back when the index update inserts the donor's older copy of it.
-To prevent this, recipient replicas keep a tombstone for every key that is deleted while \texttt{TXN\_START($G_i$)} is active, and the index update skips keys that have a tombstone. The tombstones of $G_i$ are removed once its index update finishes.
+Because new writes for $G_i$ go to the recipient leader during the migration, the migrating buffers contain older versions of those keys.
+The index update detects and discards such stale entries, keeping only the most recent values of the keys (by not allowing index update threads to update the index if the key already exists, since that key was modified during the transfer).
+The recipient leader and its replicas also keep tombstones for keys that have been deleted while \texttt{TXN\_START($G_i$)} is active, and the index update skips keys that have a tombstone.
+The tombstones of $G_i$ are removed once the index update for $G_i$ finishes.
+
+\noindent\textbf{Index update during recovery of the recipient leader.}
+\textcolor{red}{TBD.}
 
 \subsection{Serving client requests during migration}
 \label{sec:serving-during-migration}
 
-\OurImplementation{} migrates data without interrupting client-facing operations. Requests for slots that are not under migration are handled normally by their owning shard group.
-As in the underlying replication protocol, all client requests for $G_i$ are served by shard-group leaders. Writes are served by the recipient leader, and reads by the donor and recipient leaders.
-Once \texttt{TXN\_START($G_i$)} is committed (step~\mstep{2}), writes to its slots are redirected to the recipient shard group, processed by the recipient leader, and committed through its replicated log.
-The donor applies no further writes to $G_i$, so no write-back or reconciliation is needed after the migration, and stale-entry detection and tombstones keep the migrated data from overwriting these writes.
-As in Fulva~\cite{fulva}, writes go to the recipient and reads use double reads during the migration.
-Until \texttt{TRANSFER\_DURABLE($G_i$)} commits, clients use double reads, so that a read never depends on data the recipient may not yet hold.
-Once it commits, the recipient shard group serves $G_i$ on its own. By the durability invariant, any newly elected leader can obtain the data from its shard group.
+\OurImplementation{} migrates data without interrupting the client operations.
+As in the underlying replication protocol, reads are served by the leader of each shard group.
+During migration writes are served by the recipient leader, and reads by both the donor and the recipient leader.
+Once \texttt{TXN\_START($G_i$)} is committed (step~\mstep{2}), writes to its slots are redirected to the recipient shard group, processed by the recipient leader and committed through the replicated log.
+For deletes, tombstones are kept on the recipient shard group to avoid the index update (Section~\ref{sec:index_updating}) overwriting a deleted key.
+As in Fulva~\cite{fulva}, writes go to the recipient leader, while reads are served using double reads during the migration.
+Until \texttt{TRANSFER\_DURABLE($G_i$)} is committed, clients use double reads, because the recipient leader may hold the group's buffers but not yet have performed the index update.
+Once \texttt{TRANSFER\_DURABLE($G_i$)} commits, the recipient shard group can serve $G_i$ on its own.
+By the durability invariant, any newly elected leader can obtain the data from its shard group.
 
 \subsection{Failure handling}
 \label{sec:failure-handling}
@@ -118,6 +128,7 @@ The leader uses the link status to repair the chain, and it reads the flags in t
 A newly elected recipient leader therefore knows from its own flag whether it holds the data, and it learns the flags of the other replicas within one round of \texttt{AppendEntries}.
 A replica that crashes restarts with the flag cleared, since its buffers were in memory, so a flag never claims data that no longer exists.
 
+
 \paragraph{Donor recovery.}
 A newly elected donor leader resumes each group that has \texttt{START($G_i$)} but no \texttt{DONE($G_i$)} (Algorithm~\ref{alg:donor-recovery}).
 It asks the recipient leader for the state of the group with a \texttt{QUERY\_STATE($G_i$)} RPC, and the recipient answers from its soft state and its log.
@@ -141,6 +152,34 @@ If no live replica holds the data, it asks the donor to send it again, which is 
 The leader then resumes the intra-recipient phase. It replicates the data to the replicas that lack it, updates its index, and commits \texttt{TRANSFER\_DURABLE($G_i$)} once a majority holds the data.
 It obtains the data before it waits for a majority, because if every replica that held the data has crashed, no majority can form until the data arrives again.
 
+% The no-fault figure is declared HERE, late in the page the table opens, so that the
+% top of that page is already composed when it arrives and it lands on the top of the
+% next one. Declared beside the table it shared page 6 with it; declared inside
+% Section~4 it slipped to page 8 (AqRaft 2026-11-21).
+\begin{figure*}[t]
+  \centering
+  % the two panels side by side across the text width: each is already one column wide, so
+  % they sit two across with room to spare, and the float is half as tall as it was stacked
+  % the subcaption is centred over the PLOT, not over the panel: the lane names take the
+  % first 1.02 in of (a), so a box centred on the panel sits half an inch left of the plot
+  \begin{subfigure}[t]{4.56in}
+    \hspace*{1.020in}\begin{minipage}{3.46in}\centering
+      \caption{the phases of all three donor--recipient pairs}\label{fig:healthy-phases}
+    \end{minipage}
+    \par\centering\includegraphics{experiments/crash_recovery/figures/HEALTHY.pdf}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{2.40in}
+    \hspace*{0.162in}\begin{minipage}{2.22in}\centering
+      \caption{what the clients see over the same run}\label{fig:healthy-ycsb}
+    \end{minipage}
+    % (a) spends its top 0.154in on the group legend, so (b) is drawn that much shorter and
+    % pushed down by the same amount: the two plot frames then share a top and a bottom edge.
+    \par\centering\vspace*{0.154in}\includegraphics{experiments/crash_recovery/figures/healthy_ycsb.pdf}
+  \end{subfigure}
+  \caption{The no-fault migration.}
+  \label{fig:healthy}
+\end{figure*}
+
 \paragraph{Timeouts.}
 Failures are detected through timeouts or broken connections (Section~\ref{sec:fault-model}), so every wait that depends on another node has a timeout.
 A donor leader that gets no \texttt{DURABLE} after sending \texttt{RDMA\_DONE($G_i$)} sends \texttt{QUERY\_STATE($G_i$)} to the recipient leader, finding the new leader if it has changed.
@@ -155,7 +194,7 @@ Fig.~\ref{fig:recipient_recovery} shows a recipient leader crash: B1 crashes aft
 
 \begin{figure}[t]
   \centering
-  \input{figs/2.tex}
+  \input{illustrations/2.tex}
   \caption{Recovery of group $G_i$ after the recipient leader crashes.
   (a)~B2 is elected leader.
   (b)~Its log holds \texttt{TXN\_START($G_i$)} but not \texttt{TRANSFER\_DURABLE($G_i$)}, and B2 lacks the data.

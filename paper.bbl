@@ -20,6 +20,11 @@ Muthukaruppan Annamalai, Kaushik Ravichandran, Harish Srinivas, Igor Zinkovsky,
 \newblock In {\em Proceedings of the 13th USENIX Symposium on Operating Systems
   Design and Implementation (OSDI '18)}. USENIX Association, 2018.
 
+\bibitem{Infiniband-spec}
+InfiniBand~Trade Association.
+\newblock Infiniband architecture specification, release 1.0, 2000, 2000.
+\newblock http://www.infinibandta.org/specs.
+
 \bibitem{atikoglu-kv-workload}
 Berk Atikoglu, Yuehai Xu, Eitan Frachtenberg, Song Jiang, and Mike Paleczny.
 \newblock Workload analysis of a large-scale key-value store.
@@ -42,12 +47,29 @@ Fay Chang, Jeffrey Dean, Sanjay Ghemawat, Wilson~C. Hsieh, Deborah~A. Wallach,
 \newblock In {\em Proceedings of the 7th USENIX Symposium on Operating Systems
   Design and Implementation (OSDI '06)}. USENIX Association, 2006.
 
+\bibitem{ycsb}
+Brian~F. Cooper, Adam Silberstein, Erwin Tam, Raghu Ramakrishnan, and Russell
+  Sears.
+\newblock Benchmarking cloud serving systems with ycsb.
+\newblock In {\em Proceedings of the 1st ACM Symposium on Cloud Computing},
+  SoCC '10, page 143–154, New York, NY, USA, 2010. Association for Computing
+  Machinery.
+
 \bibitem{dynamodb}
 Giuseppe DeCandia, Deniz Hastorun, Madan Jampani, Gunavardhan Kakulapati,
   Avinash Lakshman, Alex Pilchin, Swaminathan Sivasubramanian, Peter Vosshall,
   and Werner Vogels.
 \newblock Dynamo: Amazon’s highly available key-value store.
 \newblock In {\em ACM Symposium on Operating System Principles}, 2007.
+
+\bibitem{cloudlab}
+Dmitry Duplyakin, Robert Ricci, Aleksander Maricq, Gary Wong, Jonathon Duerig,
+  Eric Eide, Leigh Stoller, Mike Hibler, David Johnson, Kirk Webb, Aditya
+  Akella, Kuangching Wang, Glenn Ricart, Larry Landweber, Chip Elliott, Michael
+  Zink, Emmanuel Cecchet, Snigdhaswin Kar, and Prabodh Mishra.
+\newblock The design and operation of {CloudLab}.
+\newblock In {\em 2019 USENIX Annual Technical Conference (USENIX ATC 19)},
+  pages 1--14, Renton, WA, July 2019. USENIX Association.
 
 \bibitem{dynamodb-atc22}
 Mostafa Elhemali, Niall Gallagher, Nicholas Gordon, Joseph Idziorek, Richard

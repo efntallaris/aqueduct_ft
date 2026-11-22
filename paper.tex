@@ -4,11 +4,18 @@
 
 \usepackage{amsmath,amssymb,amsfonts}
 \usepackage{graphicx}
+\usepackage[font=small,labelfont=bf]{subcaption}
 \usepackage{textcomp}
 \usepackage{array}
 \usepackage{booktabs}
 \usepackage{tikz}
-\usetikzlibrary{arrows.meta,decorations.pathreplacing}
+
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+
+
+% my archive
+\usetikzlibrary{arrows.meta,decorations.pathreplacing,patterns}
 \newcommand{\mstep}[1]{\tikz[baseline={([yshift=-0.34em]s.center)}]\node[circle,fill=black!85,text=white,inner sep=0pt,minimum size=8.4pt,text height=4.65pt,text depth=0.6pt,font=\fontsize{6.5}{6.5}\fontfamily{phv}\bfseries\selectfont](s){\ifnum#1=1 \kern0.72pt\fi#1};}%
 \usepackage{placeins}
 \renewcommand{\topfraction}{0.9}
@@ -21,10 +28,6 @@
 \makeatletter
 \renewcommand\paragraph{\@startsection{paragraph}{4}{\z@}{\z@}{-1em}{\normalfont\normalsize\bfseries}}
 \makeatother
-
-\usepackage{algorithm}
-\usepackage{algpseudocode}
-
 \newcommand{\phasesep}[1]{\Statex \textcolor{gray}{\hrulefill\;\textit{\small #1}\;\hrulefill}}
 \newcommand{\msg}[1]{\textsc{#1}}
 \newcommand{\fn}[1]{\textnormal{\textsc{#1}}}
@@ -55,6 +58,12 @@ Abstract goes here. USENIX asks for no more than 200 words, preferably closer to
 
 \input{background.tex}
 \input{design.tex}
+\input{evaluation.tex}
+% The conclusion is parked outside the repository, at
+%   ../aqueduct_ft_stash/conclusion.tex
+% so it is not committed with the rest. Restore it by moving the file back here and
+% uncommenting the line below (AqRaft 2026-11-22).
+%\input{conclusion.tex}
 \input{migration_rdma_faq.tex}
 
 \bibliographystyle{plain}

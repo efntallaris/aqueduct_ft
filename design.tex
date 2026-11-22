@@ -8,8 +8,8 @@
 
 SAMM is a semantic overlay allocator. It interposes a slot-aware region-management layer between the application and a commodity allocator (e.g., jemalloc~\cite{jemalloc}), without replacing it. The architecture is hierarchical, as shown in Figure~\ref{fig:samm-arch}.
 
-\newsavebox{\sammArchBox}\sbox{\sammArchBox}{\input{figs/samm_arch.tex}}
-\newsavebox{\sammLayoutBox}\sbox{\sammLayoutBox}{\resizebox{0.8\columnwidth}{!}{\input{figs/samm.tex}}}
+\newsavebox{\sammArchBox}\sbox{\sammArchBox}{\input{illustrations/samm_arch.tex}}
+\newsavebox{\sammLayoutBox}\sbox{\sammLayoutBox}{\resizebox{0.8\columnwidth}{!}{\input{illustrations/samm.tex}}}
 \newlength{\sammFigH}\setlength{\sammFigH}{\dimexpr\ht\sammLayoutBox+\dp\sammLayoutBox\relax}
 
 \begin{figure}[t]
@@ -40,7 +40,7 @@ The slot table is a flat array indexed by slot identifier. Each entry represents
 The slot table entry is the sole authoritative index of a slot's memory footprint. During slot migration, SAMM traverses the block list starting at head and emits each block's body as a contiguous byte range. No scatter-gather over the global heap is required.
 
 \paragraph{Block layout.}
-A block is a fixed-size, contiguous memory block obtained from jemalloc (e.g., 2\,MB, aligned to a hugepage boundary). Each block is exclusively owned by one slot. Rather than a slotted-page directory, SAMM structures each block with a prologue and an epilogue---fixed-size metadata blocks at the low and high ends of the block respectively. The body between them holds a dense, append-style sequence of variable-sized segments (Fig.~\ref{fig:samm}).
+A block is a fixed-size, contiguous memory block obtained from jemalloc (e.g., 2MB, aligned to a hugepage boundary). Each block is exclusively owned by one slot. Rather than a slotted-page directory, SAMM structures each block with a prologue and an epilogue---fixed-size metadata blocks at the low and high ends of the block respectively. The body between them holds a dense, append-style sequence of variable-sized segments (Fig.~\ref{fig:samm}).
 
 \paragraph{Segment layout.}
 A segment is the atomic unit of storage for a single key-value pair. Segments are variable-sized. Each segment is exactly large enough to hold the fixed-size header plus the key and value payloads, with no wasted padding beyond alignment. The segment format is:
@@ -75,7 +75,7 @@ When SAMM needs a new block for a slot, it invokes the arena's alloc hook, recei
 
 \begin{figure}[t]
   \centering
-  \input{figs/1.tex}
+  \input{illustrations/1.tex}
   \caption{\OurImplementation{} migration protocol.}%
   \label{fig:migration_flow}
 \end{figure}
