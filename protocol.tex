@@ -2,24 +2,26 @@
 \label{sec:migration-protocol}
 \label{sec:log-entries}
 
-A migration moves a set of slots from a \emph{donor} shard group to a \emph{recipient} shard group.
-A coordinator $C$ splits the slots into \emph{migration groups} $G_1, \dots, G_n$ and instructs the donor leader to migrate them to the recipient leader. Together, the groups form one migration transaction, driven on each leader by the \emph{Migration Manager (MM)}, a dedicated thread that manages the migration.
+During migration a set of slots is being moved from a donor shard group to a recipient shard group.
+A coordinator $C$ splits the slots into \emph{migration groups} $G_1, \dots, G_n$ and instructs the donor leader to migrate them to the recipient leader. 
+Groups are moved in the form of a transaction, by the \emph{Migration Manager (MM)} (a dedicated thread that controls the migration) of each leader.
 Each group $G_i = \{s_1, \dots, s_m\}$ is a set of slots, and each slot $s_j$ contains the keys that map to it (e.g., by hashing), together with their values.
-In memory, the key-value pairs of a slot are stored in the SAMM blocks that the slot owns (Section~\ref{sec:samm}), so migrating $G_i$ means transferring the blocks of its slots.
-Bulk data moves with one-sided RDMA writes and never goes through the log. Only the decisions that must survive a crash are appended to each shard group's replicated log.
+The key-value pairs of a slot are stored in blocks of SAMM allocator that the slot owns (Section~\ref{sec:samm}).
+Migrating $G_i$ means transferring the blocks of its slots belonging to $G_i$.
+Blocks are being moved as bulk, using one-sided RDMA, and never go through the log.
+During migration, only decisions related to migration that must survive a crash are appended to each shard group's replicated log.
 Under the fault model of Section~\ref{sec:fault-model}, our protocol ensures that
 (i)~committed writes are never lost,
 (ii)~a read never returns data that is only partially migrated or not yet replicated, and
 (iii)~once a migration starts, it always runs to completion and is never rolled back.
 Properties (i) and (ii) come from Fulva~\cite{fulva}.
-The protocol has a \emph{fast path}, which a migration follows when no node crashes (Section~\ref{sec:migration-phases}), and recovery rules that resume it after a crash (Section~\ref{sec:failure-handling}).
+The protocol has a \emph{failure-free path}, which a migration follows when no node crashes (Section~\ref{sec:migration-phases}), and a recovery algorithm that resumes the migration after a crash (Section~\ref{sec:failure-handling}).
 
 The progress of each group $G_i$ is recorded by four entries in the donor's and the recipient's replicated logs (Table~\ref{tab:log-entries}).
-Every replica learns how far the migration got by applying its log, so a newly elected leader resumes from the last committed entry instead of relying on in-memory state, which a crash loses.
-The protocol rests on one invariant:
-\emph{if \texttt{TRANSFER\_DURABLE($G_i$)} is committed, a majority of the recipient shard group holds the data of $G_i$.}
-It holds because the recipient leader proposes this entry only after a majority of replicas have reported receiving the data (step~\mstep{5}).
-Since the fault model keeps a majority of the shard group available and any two majorities intersect, a newly elected leader that lacks part of the data can fetch it from its shard group before serving $G_i$.
+A replica knows the status of the migration by applying its log.
+Once \texttt{TRANSFER\_DURABLE($G_i$)} is committed, a majority of the recipient shard group holds the data of $G_i$.
+The recipient leader commits this entry only after a majority of the replicas report that they hold the data~(step~\mstep{5}).
+A newly elected leader that is missing the data of $G_i$ can fetch the data from the shard group it belongs to before serving $G_i$.
 
 \iffalse
 \begin{figure*}[t]
@@ -46,15 +48,15 @@ The donor leader starts by appending \texttt{START($G_i$)} to its replication lo
 It then scans the blocks of the slots of $G_i$ from its slot table (Section~\ref{sec:samm}) and registers them with its RNIC, unless they are already registered out of the migration path (e.g.\ at block allocation, or as part of one memory region that covers the whole address space of the key-value store).
 
 The \emph{leader-to-leader} phase follows.
-The donor leader sends a \texttt{prepare} RPC to the recipient leader, which allocates the landing buffers for $G_i$ and registers them with its RNIC as memory regions.
-The allocation and the registration can also happen out of the migration path, before the \texttt{prepare} arrives, so that the recipient only reports memory regions that are already registered.
+The donor leader sends \texttt{prepare} RPC to the recipient leader, which allocates the landing buffers for $G_i$ and registers them with the RNIC as memory regions.
+The allocation and the registration can take place out of the migration path, and the recipient only replies with memory regions that are already registered.
 Then \texttt{TXN\_START($G_i$)} is appended to the log, and once it commits, a reply with the memory regions, namely their addresses, sizes, and access keys (RKeys)~\cite{Infiniband-spec}, is sent to the donor leader~(step~\mstep{2}).
-
 From this point, writes to $G_i$ are directed to the recipient shard group.
-The donor leader lets the writes to $G_i$ that are already in progress finish and applies no further writes to $G_i$.
+The donor leader finishes the writes to $G_i$ that are already in progress, and writes are stopped on the donor leader for keys belonging to $G_i$.
 The blocks that are about to be transferred become immutable.
-This is also the point from which \OurImplementation{} keeps tombstones for deletes.
-Using the RDMA buffer pointers and the RKeys, the donor issues one-sided RDMA writes for the blocks of $G_i$ directly into the landing buffers, and then sends an \texttt{RDMA\_DONE} RPC to the recipient leader~(step~\mstep{3}).
+For deletes, from this point \OurImplementation{} keeps tombstones.
+Using the MR buffer pointers and the RKeys, 
+the donor issues one-sided RDMA writes for the blocks of $G_i$, and then sends an \texttt{RDMA\_DONE} RPC to the recipient leader~(step~\mstep{3}).
 
 The \emph{intra-recipient} phase starts on the \texttt{RDMA\_DONE} RPC.
 The recipient leader replicates the data of $G_i$ down the chain of its shard group (Section~\ref{sec:chain-replication}) and in parallel runs its own index update (Section~\ref{sec:index_updating}).
@@ -114,24 +116,26 @@ A crash erases everything a node holds only in memory, such as landing buffers a
 % It tells a newly elected leader which groups are in flight, namely those with a start entry but no matching done entry.
 \emph{Soft state} records which replicas currently hold the data of a group, and the status of the chain that transfers it.
 This state is in-memory of each node and upon crash, the leader can rebuild it from the live replicas.
-Recovery always moves forward. Since a state of a slot is on two replica groups, aborting a transaction would be far more complex. A new leader resumes each group in flight from its last committed entry and never rolls it back.
-Sending the data of a group again is harmless, because the index update discards entries that are not newer than what the recipient holds.
+Recovery always moves forward. Since a state of a slot is on two replica groups, aborting a transaction would be far more complex. A newly elected leader resumes an in-flight group from the last committed entry and rolls forward.
+Resending the data of a group and executing the index update do not affect consistency, since the index update discards entries that are not newer than what the recipient holds.
 
 \paragraph{Soft state.}
-Each recipient replica $R_j$ keep in-memory flags to track the status of the group. A local flag $\texttt{TRANSFERRED}[R_j][G_i]$, indicates that $R_j$ has all blocks of group $G_i$.
+Each recipient replica $R_j$ keeps in-memory flags to track the status of the group. A local flag $\texttt{TRANSFERRED}[R_j][G_i]$ indicates that $R_j$ has all blocks of group $G_i$.
 One-sided RDMA writes do not notify the replica they write to, so the flag is set by the message that follows them.
 The leader sets its flag when it receives \texttt{RDMA\_DONE($G_i$)} from the donor, and a follower sets its flag when it receives \texttt{CHAIN\_DONE($G_i$)} from its predecessor in the chain (Section~\ref{sec:chain-replication}) (Fig. \ref{fig:migration_flow}).
 A leader that fetches $G_i$ from a replica sets its flag once the fetch completes.
-Each replica also records the status of the link to its successor in the chain, that is, whether the timeout for its successor has expired or its RDMA connection to it has broken (Section~\ref{sec:chain-replication}).
-Each replica reports its flag and the status of its link in every reply to the leader's \texttt{AppendEntries} messages, so the soft state needs no extra messages.
+Each replica also tracks the RDMA link status to its successor in the chain (whether that link broke) and the transfer timeouts.
+Every reply to the leader's \texttt{AppendEntries} messages carries the flag and the link status, so the soft state costs no messages of its own.
 The leader uses the link status to repair the chain, and it reads the flags in two places. It commits \texttt{TRANSFER\_DURABLE($G_i$)} once a majority has set its flag, and it answers \texttt{QUERY\_STATE($G_i$)} from its own flag and those of the other replicas.
-A newly elected recipient leader therefore knows from its own flag whether it holds the data, and it learns the flags of the other replicas within one round of \texttt{AppendEntries}.
-A replica that crashes restarts with the flag cleared, since its buffers were in memory, so a flag never claims data that no longer exists.
+A newly elected recipient leader knows from its own flag whether it holds the data, and one round of \texttt{AppendEntries} tells it the flags of the others.
+A replica that crashes comes back with its flag cleared, because its buffers were in memory.
+No flag ever claims data that is gone.
 
 
 \paragraph{Donor recovery.}
 A newly elected donor leader resumes each group that has \texttt{START($G_i$)} but no \texttt{DONE($G_i$)} (Algorithm~\ref{alg:donor-recovery}).
-It asks the recipient leader for the state of the group with a \texttt{QUERY\_STATE($G_i$)} RPC, and the recipient answers from its soft state and its log.
+It asks the recipient leader for the state of the group with a \texttt{QUERY\_STATE($G_i$)} RPC.
+The recipient answers from its soft state and its log.
 The reply is \texttt{DURABLE} if \texttt{TRANSFER\_DURABLE($G_i$)} is committed.
 Otherwise, the reply is \texttt{TRANSFERRED} if the recipient leader holds the data, that is, if its own flag $\texttt{TRANSFERRED}[R_j][G_i]$ is set.
 If it does not, it asks the other replicas, fetches the data from one whose flag is set, and then replies \texttt{TRANSFERRED}.
@@ -139,7 +143,8 @@ If no live replica holds the data, the reply is \texttt{MISSING}.
 The donor commits \texttt{DONE($G_i$)} on \texttt{DURABLE}.
 On \texttt{MISSING}, it first transfers the group again, starting from \texttt{prepare}.
 On any reply other than \texttt{DURABLE}, it keeps sending \texttt{QUERY\_STATE($G_i$)} until it receives \texttt{DURABLE}.
-If the replicas holding the data crash after a \texttt{TRANSFERRED} reply, the recipient leader asks for the data again, and the donor can always serve it, because it keeps its copy of $G_i$ until \texttt{DONE($G_i$)} commits.
+If the replicas holding the data crash after a \texttt{TRANSFERRED} reply, the recipient leader asks for the data again.
+The donor can always serve it, since it keeps its copy of $G_i$ until \texttt{DONE($G_i$)} commits.
 Every new transfer uses newly allocated landing buffers with new RKeys, so late RDMA writes from an earlier attempt fail instead of overwriting them.
 
 \paragraph{Recipient recovery.}
@@ -148,9 +153,11 @@ A group whose \texttt{TRANSFER\_DURABLE($G_i$)} is committed is complete on the 
 The new leader does nothing for such a group, because the donor learns the outcome from the reply to its \texttt{QUERY\_STATE($G_i$)}.
 For a group in flight, the leader must first hold the data itself.
 If its transferred flag is not set, it fetches the data from a replica whose flag is set.
-If no live replica holds the data, it asks the donor to send it again, which is the usual case when the crash interrupted a transfer, since the followers had not yet received the whole group.
+If no live replica holds the data, it asks the donor to send it again.
+This is the usual case when the crash interrupted a transfer, because the followers had not yet received the whole group.
 The leader then resumes the intra-recipient phase. It replicates the data to the replicas that lack it, updates its index, and commits \texttt{TRANSFER\_DURABLE($G_i$)} once a majority holds the data.
-It obtains the data before it waits for a majority, because if every replica that held the data has crashed, no majority can form until the data arrives again.
+It obtains the data before it waits for a majority.
+If every replica that held the data has crashed, no majority can form until the data arrives again.
 
 % The no-fault figure is declared HERE, late in the page the table opens, so that the
 % top of that page is already composed when it arrives and it lands on the top of the
@@ -182,12 +189,12 @@ It obtains the data before it waits for a majority, because if every replica tha
 
 \paragraph{Timeouts.}
 Failures are detected through timeouts or broken connections (Section~\ref{sec:fault-model}), so every wait that depends on another node has a timeout.
-A donor leader that gets no \texttt{DURABLE} after sending \texttt{RDMA\_DONE($G_i$)} sends \texttt{QUERY\_STATE($G_i$)} to the recipient leader, finding the new leader if it has changed.
-A donor leader that gets no reply to \texttt{QUERY\_STATE($G_i$)}, or no \texttt{DURABLE} after a \texttt{TRANSFERRED} reply or a new transfer, queries the recipient leader again.
-A recipient leader that asked for the data and gets no \texttt{RDMA\_DONE} asks again.
-A newly elected recipient leader waits one heartbeat interval for the flags of the replicas and treats a replica that does not answer as lacking the data.
-Every action taken on a timeout is a query or a new transfer, both of which can be repeated safely, and every decision comes from committed log entries.
-A timeout that fires too early therefore costs at most an extra transfer, and one that fires too late only delays recovery.
+When the donor leader sends \texttt{RDMA\_DONE($G_i$)} and no \texttt{DURABLE} follows, it sends \texttt{QUERY\_STATE($G_i$)} to the recipient leader, which finds the new leader if the old one has gone.
+It queries again whenever that \texttt{QUERY\_STATE($G_i$)} goes unanswered, and whenever no \texttt{DURABLE} follows a \texttt{TRANSFERRED} reply or a new transfer.
+On the recipient side, a leader that asked for the data and never saw \texttt{RDMA\_DONE} asks once more.
+A newly elected recipient leader gives the replicas one heartbeat interval to report their flags, and counts a silent replica as lacking the data.
+Each of these actions is a query or a new transfer, both of which can be repeated safely, and every decision rests on committed log entries.
+An early timeout costs one extra transfer at worst, and a late one only delays the recovery.
 
 \iffalse
 Fig.~\ref{fig:recipient_recovery} shows a recipient leader crash: B1 crashes after receiving $G_i$ but before replicating it, so the new leader B2 finds $G_i$ in flight without holding its data, obtains it again from the donor, and completes the migration.
@@ -213,14 +220,16 @@ The recipient leader replicates the data of $G_i$ to its followers with chain re
 The leader orders the live replicas into a chain and writes the data to the first one.
 Each replica that has received the data forwards it to its successor and signals it with a \texttt{CHAIN\_DONE} message~(step~\mstep{4}).
 The chain is set up before the migration starts, off its critical path.
-The recipient leader opens an RDMA connection to every follower and registers landing buffers on each of them, and the followers connect to each other, so any replica can forward the data to any other.
+The recipient leader opens an RDMA connection to every follower and registers landing buffers on each of them.
+The followers also connect to each other, so any replica can forward the data to any other.
 Each transaction gets its own transaction ID and its own landing buffers on every replica, so the groups of concurrent donors never overwrite each other.
 
 \paragraph{Transfer state.}
 The leader learns the state of the transfer without extra messages.
 Every replica piggybacks it on its replies to the leader's \texttt{AppendEntries} messages, reporting which landing buffers of $G_i$ it holds and whether its transferred flag is set.
-A replica sets the flag only after the whole of $G_i$ has landed, that is, after it receives \texttt{RDMA\_DONE} from the donor or \texttt{CHAIN\_DONE} from its predecessor, because one-sided RDMA writes do not notify it.
-The leader therefore knows at any time how far the data has travelled down the chain.
+One-sided RDMA writes do not notify the replica they write to.
+A replica therefore sets its flag only when the message that follows the data arrives, \texttt{RDMA\_DONE} from the donor or \texttt{CHAIN\_DONE} from its predecessor.
+The leader knows at any time how far the data has travelled down the chain.
 It learns that a majority holds $G_i$ once $f$ followers have reported it, without waiting for the rest of the chain.
 Replication to this majority is synchronous. The remaining replicas receive the data asynchronously from the ongoing chain.
 
@@ -232,7 +241,8 @@ The leader then moves the successor to the end of the chain.
 It tells the closest replica before it that holds $G_i$ to forward the data to the next replica in the new order.
 This is the leader itself if no follower before the moved replica holds $G_i$.
 The data does not change during the transfer, so the forwarding replica sends the whole of $G_i$ again and needs no record of what it sent before.
-A replica whose RDMA connection to its successor breaks reports it in the same way, without waiting for the timeout, and the leader moves that successor to the end of the chain as well.
+A replica whose RDMA connection to its successor breaks reports it in the same way, without waiting for the timeout.
+The leader moves that successor to the end of the chain as well.
 A replica that crashed and rejoins reports a cleared flag, and the leader adds it at the end of the chain.
 
 The leader counts a replica as holding $G_i$ only when that replica reports it, so a timeout never makes \texttt{TRANSFER\_DURABLE($G_i$)} commit early.

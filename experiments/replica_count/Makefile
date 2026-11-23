@@ -39,7 +39,7 @@ unexport CMU_DIR
 
 ifeq ($(wildcard data/D3_r1),)
 all:
-	@echo "experiments/replica_count: no data/, keeping the committed PDF (see ../../../aqueduct_ft_stash/experiments/replica_count/README.md)"
+	@echo "experiments/replica_count: no data/, keeping the committed PDF"
 else
 
 all: figures/replicas_3v5.pdf figures/replicas_allpairs.pdf figures/replicas_projected.pdf

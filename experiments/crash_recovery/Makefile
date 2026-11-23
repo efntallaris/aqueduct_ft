@@ -146,7 +146,7 @@ CSV       := derived/ycsb/ycsb_per_second.csv
 # no data/ there is nothing to regenerate them from, so do nothing rather than fail.
 ifeq ($(wildcard data/HEALTHY),)
 all:
-	@echo "experiments/crash_recovery: no data/, keeping the committed PDFs (see ../../../aqueduct_ft_stash/experiments/crash_recovery/README.md)"
+	@echo "experiments/crash_recovery: no data/, keeping the committed PDFs"
 else
 
 all: $(PHASE_PDF) $(SMALL_PDF) figures/grid6.pdf figures/lat6.pdf figures/healthy_ycsb.pdf $(CSV)
