@@ -26,7 +26,7 @@ latex.out/
 ## PDFs are build products, except figures and slide exports
 *.pdf
 !illustrations/**/*.pdf
-!experiments/**/figures/*.pdf
+!experiments/**/figures/**/*.pdf
 !protocol_ppt/*.pdf
 
 ## TikZ externalization
