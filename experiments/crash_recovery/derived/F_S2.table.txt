@@ -1,0 +1,18 @@
+== S2  kills: redis0 at +0.00
+  sg1: failure detection (election timeout) -> pre-candidate                      +0.00 ->  +1.19  =  1.19 s
+  sg1: election (pre-vote + vote) -> new leader                                   +1.19 ->  +1.37  =  0.17 s
+  sg1: donor decides the roll-forward (re-home / resume plan)                     +1.37 ->  +1.37  =  0.00 s
+  sg1 re-ship: setup                                                              +1.37 ->  +1.37  =  0.01 s
+  sg1 re-ship: copy donor -> recipient leader                                     +1.37 ->  +1.89  =  0.52 s
+  sg4 re-ship: replication leader -> F1                                           +1.50 ->  +2.01  =  0.51 s
+  sg4 re-ship: INDEX UPDATE (leader merge, gated on F1 holding each block)        +1.50 ->  +2.01  =  0.51 s
+  sg1 re-ship: durable -> TXN_DONE + NARROW                                       +2.02 ->  +2.03  =  0.01 s
+  CLIENT pair A keys in flight (13 keys): outage median (typical -0.09 -> +0.24)  +0.00 ->  +0.24  =  0.24 s
+  CLIENT pair A keys in flight (13 keys): outage max                              +0.00 ->  +1.42  =  1.42 s
+  CLIENT pair A keys in flight: served again (median key)                         +0.00 ->  +0.24  =  0.24 s
+  CLIENT pair A keys on donor (54 keys): outage median (typical -0.09 -> +1.41)   +0.00 ->  +1.41  =  1.41 s
+  CLIENT pair A keys on donor (54 keys): outage max                               +0.00 ->  +1.66  =  1.66 s
+  CLIENT pair A keys on donor: served again (median key)                          +0.00 ->  +1.41  =  1.41 s
+  CLIENT unaffected keys: outage median (probe threads stuck on dead keys)        +0.00 ->  +0.24  =  0.24 s
+  CLIENT unaffected keys: outage max                                              +0.00 ->  +1.70  =  1.70 s
+wrote derived/F_S2.png

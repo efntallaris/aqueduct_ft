@@ -1,0 +1,23 @@
+== S5  kills: redis0 at +0.00, redis3 at +0.01
+  sg1: failure detection (election timeout) -> pre-candidate                      +0.00 ->  +1.30  =  1.30 s
+  sg1: election (pre-vote + vote) -> new leader                                   +1.30 ->  +1.55  =  0.25 s
+  sg4: failure detection (election timeout) -> pre-candidate                      +0.01 ->  +1.36  =  1.35 s
+  sg4: election (pre-vote + vote) -> new leader                                   +1.36 ->  +1.36  =  0.01 s
+  sg4 new leader: INDEX UPDATE of durable data (then serves)                      +1.36 ->  +1.37  =  0.00 s
+  sg1: donor decides the roll-forward (re-home / resume plan)                     +1.55 ->  +1.55  =  0.00 s
+  sg1: donor decides the roll-forward (re-home / resume plan)                     +2.09 ->  +2.11  =  0.02 s
+  sg1 re-ship: setup                                                              +2.11 ->  +2.14  =  0.03 s
+  sg1 re-ship: copy donor -> recipient leader                                     +2.14 ->  +2.65  =  0.51 s
+  sg4 re-ship: replication leader -> F1                                           +2.27 ->  +2.78  =  0.51 s
+  sg4 re-ship: INDEX UPDATE (leader merge, gated on F1 holding each block)        +2.27 ->  +2.78  =  0.51 s
+  sg1 re-ship: durable -> TXN_DONE + NARROW                                       +2.79 ->  +2.80  =  0.02 s
+  sg4 new leader: rebuild replication chain (dead-peer connect timeout)           +1.37 ->  +1.49  =  0.13 s
+  CLIENT pair A keys in flight (13 keys): outage median (typical -0.12 -> +1.64)  +0.00 ->  +1.64  =  1.64 s
+  CLIENT pair A keys in flight (13 keys): outage max                              +0.00 ->  +2.12  =  2.12 s
+  CLIENT pair A keys in flight: served again (median key)                         +0.00 ->  +1.64  =  1.64 s
+  CLIENT pair A keys on donor (54 keys): outage median (typical -0.06 -> +1.64)   +0.00 ->  +1.64  =  1.64 s
+  CLIENT pair A keys on donor (54 keys): outage max                               +0.00 ->  +2.20  =  2.20 s
+  CLIENT pair A keys on donor: served again (median key)                          +0.00 ->  +1.64  =  1.64 s
+  CLIENT unaffected keys: outage median (probe threads stuck on dead keys)        +0.00 ->  +0.27  =  0.27 s
+  CLIENT unaffected keys: outage max                                              +0.00 ->  +2.06  =  2.06 s
+wrote derived/F_S5.png

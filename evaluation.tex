@@ -1,0 +1,263 @@
+% This section has one full-width table, one full-width figure and three column
+% figures over two pages of text. The preamble allows a single top float per page,
+% which pushes all of them past the section and onto float pages of their own, so
+% they are relaxed here and nowhere else.
+\setcounter{topnumber}{2}
+\setcounter{totalnumber}{3}
+\renewcommand{\topfraction}{0.95}
+\renewcommand{\floatpagefraction}{0.7}
+
+\section{Evaluation}
+\label{sec:evaluation}
+
+% The scenario table, declared at the head of the evaluation. It was declared a page earlier,
+% in protocol.tex, back when Section~4 opened partway down its page and a [t] float could not
+% reach that page's top. The text above has since grown, so that placement put the table a page
+% BEFORE the section that uses it; declared here it reaches the top of Section~4's own page.
+% Fragile by nature: check the page it lands on whenever the text above changes
+% (AqRaft 2026-11-22).
+\begin{table}[t]
+  \centering\small
+  % The fault column uses the same short names as the panels of Figures~\ref{fig:grid6}
+  % and~\ref{fig:crashes}, so the table and the figures can be read against each other without
+  % translating. The durable and outage columns used to sit here too and now live in the text of
+  % Section~\ref{sec:eval-scaleout}. The rows are in two blocks: the three leader crashes, which
+  % differ in WHO dies, and the three data-state cases, which differ in where the interrupted
+  % group was left (AqRaft 2026-11-22).
+  \setlength{\tabcolsep}{5pt}\renewcommand{\arraystretch}{1.22}
+  \begin{tabular}{@{}l l r@{}}
+    \toprule
+    Scen. & Fault injected mid-migration & Migr. (s) \\
+    \midrule
+    % the three leader crashes: who dies
+    S1  & recipient leader crashes            &  9.16 \\
+    S2  & donor leader crashes                &  9.04 \\
+    S3  & both leaders crash                  &  9.83 \\
+    \addlinespace[3pt]
+    % the three data-state cases: where the interrupted group was left
+    S4  & group only on the dead leader      &  9.36 \\
+    S5  & crash after \texttt{TRANSFER\_DURABLE} &  9.09 \\
+    S6  & group on leader and F1 but not F2  & 10.09 \\
+    \bottomrule
+  \end{tabular}
+  \caption{The six crash scenarios.}
+  \label{tab:scenarios}
+\end{table}
+
+
+We evaluate \OurImplementation{} migration protocol, by triggering elasticity of a running Redis cluster while YCSB~\cite{ycsb} client workload is running at the same time.
+We try to answer the following research questions.
+\begin{itemize}
+  \item What is the impact of \OurImplementation{} to the clients in the failure-free case (Figure~\ref{fig:healthy}) and fault-injection cases (Figure~\ref{fig:grid6}).
+  \item What dominates the recovery after a crash, the protocol itself or failure detection (Figure~\ref{fig:crashes}).
+  \item How the size of the recipient shard group affects the migration performance (Figure~\ref{fig:replicas}).
+\end{itemize}
+
+\paragraph{Setup.}
+\label{sec:eval-setup}
+The testbed is 12 CloudLab~\cite{cloudlab} c6620 nodes, ten running the store and two driving the workload.
+Each node has a 28-core Intel Xeon Gold 5512U at 2.1GHz and 128GB of memory, and the migration runs with RDMA over a 100GbE link, on the node's Intel E810-C NIC.
+The Redis Cluster initially starts with 3 shard groups of 3 replicas each, and scales to 6 shard groups after the elasticity action. Three donor shard groups hand 2730 slots each to three recipient shard groups. The block size is 2MB per block. The overall dataset size is 34.6GB.
+The migration is split into 4 groups, each one consisting of 682 slots, $G_1$ to $G_4$.
+
+We use two YCSB Clients to generate workloads while the migration is running.
+We use a Zipfian distribution and the YCSB-A workload.
+\textcolor{red}{TBD: why Zipf and why the YCSB-A workload.}
+We evaluate three cases.
+In the failure-free case the migration runs to completion with no node killed (Figure~\ref{fig:healthy}).
+In the fault-injection cases we inject crashes throughout the migration, and we measure how the cluster recovers and what the fault costs the migrations (Figures~\ref{fig:grid6} and~\ref{fig:crashes}).
+In the third case we widen the recipient shard group from 3 replicas to 5, and we measure what the wider group costs the migration (Figure~\ref{fig:replicas}).
+Table~\ref{tab:scenarios} lists the six scenarios.
+
+\subsection{The failure-free case}
+\label{sec:eval-healthy}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics{experiments/crash_recovery/figures/grid6.pdf}
+  \caption{Client performance (throughput and latency) under failures.}
+  \label{fig:grid6}
+\end{figure*}
+
+Figure~\ref{fig:healthy} shows a migration with no fault.
+Figure~\ref{fig:healthy}a presents the breakdown of the migration duration.
+On the x axis we see the time and on the y axis we see the phases of the protocol.
+Figure~\ref{fig:healthy}b presents the YCSB throughput and latencies (what the clients observe) during the experiment.
+
+Each group takes 0.51 seconds to transfer from the donor leader to the recipient leader.
+The donor leader starts the next transfer immediately after the previous one.
+The recipient leader's index update also overlaps with the transfer of the next group.
+The F1$\rightarrow$F2 path, which is 0.54s, is out of the majority and runs out of the critical path, and the group is durable when the leader$\rightarrow$F1 transfer completes (chain replication time).
+The three donors start migrations sequentially.
+Donor A with groups $A_1$ to $A_4$ took 2.26s, donor B with groups $B_1$ to $B_4$ took 2.26s, and donor C with groups $C_1$ to $C_4$ took 2.42s.
+Overall 7.09s to migrate 80.7GB of data, which is 91.1Gb/s over the migration window.
+
+Figure~\ref{fig:healthy}b shows the throughput and the latency of YCSB.
+The x axis shows the time of the run and the y axis shows the throughput in kops/s and the mean read and write latency in ms.
+Before the migration the throughput is 136--153kops/s and the latency is 5.0ms.
+After the migration with six shards the throughput is 274--286kops/s and the latency is 2.8ms.
+Throughput and latency do not have any impact throughout the migration.
+
+\subsection{Elasticity with fault injections}
+\label{sec:eval-scaleout}
+
+Figure~\ref{fig:grid6} shows the throughput and latency of the YCSB clients.
+The dashed lines are the time that the crash was injected.
+Mean read spikes to between 18ms and 50ms throughout the crash (Figure~\ref{fig:grid6}), and recovers back to below 5ms.
+The drop in throughput and the spike in latencies do not mean that the whole cluster is becoming unavailable.
+Only the slots of the crashed leader are unserved, and the YCSB threads that do requests for keys that are unavailable are stuck there.
+The keys outside the crashed shard group are served again within 0.28s in every scenario.
+The migration duration is between 9.04s and 10.09s because of the crashes.
+In all cases, all migrations progress and finish completely.
+
+\noindent\textbf{Breakdown.}
+\label{sec:eval-phases}
+Figure~\ref{fig:crashes} shows the breakdown of the migration for the donor/recipient leader pair that crashed.
+On the y axis we see the phases of the protocol and on the x axis we see the time after the crash.
+A red cross marks every phase that was running when the crash hit.
+
+\noindent\emph{S1, recipient leader.}
+Killing the recipient leader mid-transfer cuts the group in flight (Figure~\ref{fig:crashes}a).
+The recipient group then has no leader for 1.51s, of which 1.50s is failure detection and 0.01s the election.
+The new leader rebuilds the chain in 0.12s.
+The group is durable on the new majority 2.37s after the crash, and the groups that follow run at the original period.
+
+\noindent\emph{S2, donor leader.}
+Killing the donor leader does not affect the recipient side once the data of the group has arrived there.
+The keys that the migration had already handed over lose 0.24s, while the keys still on the donor lose 1.41s and wait for the election.
+In this case $G_1$ was in transit when the donor leader crashed.
+Once the new leader is elected it detects that $G_1$ was in transit at the time of the crash, through the log and the RPCs, and retransmits $G_1$.
+
+\noindent\emph{S3, both leaders.}
+Figure~\ref{fig:crashes}c shows the case where both leaders crashed.
+Both elections run at the same time.
+Once the new leaders are serving, $G_1$ is resent and the rest of the migration moves forward.
+
+\noindent\emph{S4, no majority.}
+In this case the original leader receives $G_1$, but we stall chain replication and the index update.
+As a result no follower had $G_1$.
+After the crash the donor detects that $G_1$ never finished and retransmits $G_1$ before $G_3$.
+Async replication is not affected, because the replicas continued to transfer data while the leader crashed.
+The groups that follow have no async replication, because the recipient shard group is down to two nodes.
+
+\noindent\emph{S5, after \texttt{DURABLE}.}
+the crash lands after TRANFER\_DURABLE is commited for a group.
+That means a majority holds this group, and the leader elected has already this group, meaning no transfer is needed neither from a replica nether from donor leader.
+The elected leaders continue from G3 and after.
+
+\noindent\emph{S6, data on F1.}
+The group had reached F1 but not F2 of the shard group, and F1 is the replica that wins the election.
+The new leader therefore finds the data in its own buffers and fetches nothing.
+After recovering, $G_1$ and $G_2$ continue the replication down the chain (async chain replication).
+
+\noindent\emph{Across the crashes.}
+A transfer that crashes takes 0.50--0.52s for the group to transfer to the leader.
+What it costs is the wait for the new leader.
+Detection takes 1.06--1.73s, which is 41--66\% of the overall recovery time until \texttt{DONE}.
+Everything the protocol does once the new leader is up adds an extra delay of 0.66--1.62s to repair the chain and fetch the data.
+Detection is an underlying configuration of the replication protocol.
+In the migration protocol the worst-case index update can take up to 0.5s since it has to parse the buffers from the start.
+
+Missing async replications in crashes S1, S3, S4, S5 and S6 are due to the shard group going down to two nodes, which is the majority.
+
+
+% Three panels and the rotated y title come to 7.07 in: 0.16 + 2.65 + 2.13 + 2.13, which is
+% the text width. Measured against 4618 figures from OSDI/NSDI/SOSP 2021-24, no full-width
+% float in those venues is wider than its text block.
+% Only the left column carries the lane names, in a 0.70 in gutter, and it is rendered
+% wider by exactly that gutter, so all six panels have the same 1.98 in of plot area and
+% one time scale. Each title is set in a 1.98 in box pushed right, so it is centred over
+% its plot rather than over its panel. The two axis titles belong to the figure, not to
+% the panels, so they are set once here and the panels are drawn without them. The
+% panels are at their final size: no width= here, or the type sizes go wrong.
+\definecolor{cgOne}{HTML}{2E2E2E}\definecolor{cgTwo}{HTML}{646464}%
+\definecolor{cgThree}{HTML}{A3A3A3}\definecolor{cgFour}{HTML}{D6D6D6}%
+\definecolor{cgRed}{HTML}{C0392B}%
+\captionsetup[subfigure]{skip=1pt}
+\begin{figure*}[t]
+  \centering
+  \makebox[\textwidth][c]{%
+    \rotatebox[origin=c]{90}{\small Phase}\hspace*{2pt}%
+    \begin{minipage}{7.30in}
+    \centering
+    % The marks of the panels, once for the figure. The greys are the four migration
+    % groups, in the shades paper_recovery.py draws them in (ROUND_COL), and the three
+    % red marks are the fault. Drawn here rather than in each panel, where a legend
+    % would cost more height than the panels have.
+    %
+    % Every mark is drawn inside the same 1.6 em box and spans the same 0.14--0.76 em
+    % band, which is centred on the x-height, so the marks sit on one optical line and
+    % each is the same distance from its label. Before this each mark set its own height
+    % and its own gap, and the row read as seven separate little pictures.
+    \newcommand{\lgdm}[1]{\makebox[1.6em][c]{\tikz[baseline=0pt]{#1}}\kern0.15em}
+    \newcommand{\lgdsq}[1]{\lgdm{\draw[fill=#1,draw=none,rounded corners=0.6pt]
+                                 (0,0.14em)rectangle(0.95em,0.76em);}}
+    \makebox[7.30in][c]{\footnotesize
+      \lgdsq{cgOne}G1\quad
+      \lgdsq{cgTwo}G2\quad
+      \lgdsq{cgThree}G3\quad
+      \lgdsq{cgFour}G4\qquad
+      \lgdm{\draw[cgRed,line width=0.7pt,dash pattern=on 1.6pt off 1.2pt]
+            (0.3em,0.02em)--(0.3em,0.88em);}the crash\quad
+      \lgdm{\draw[cgRed,line width=1.1pt](0.05em,0.17em)--(0.6em,0.73em);
+            \draw[cgRed,line width=1.1pt](0.05em,0.73em)--(0.6em,0.17em);}phase cut mid-flight\quad
+      \lgdm{\draw[cgRed,line width=0.5pt,pattern=north east lines,pattern color=cgRed]
+            (0,0.14em)rectangle(0.95em,0.76em);}the group without a leader%
+    }%
+    \par\smallskip
+    \begin{subfigure}[t]{2.78in}
+      \hfill\begin{minipage}{2.11in}\centering\caption{S1}\label{fig:c-s1}\end{minipage}\hspace*{0.05in}
+      \par\includegraphics{experiments/crash_recovery/figures/grid/S1.pdf}
+    \end{subfigure}\hfill
+    \begin{subfigure}[t]{2.26in}
+      \hfill\begin{minipage}{2.11in}\centering\caption{S2}\label{fig:c-s2}\end{minipage}\hspace*{0.05in}
+      \par\includegraphics{experiments/crash_recovery/figures/grid/S2.pdf}
+    \end{subfigure}\hfill
+    \begin{subfigure}[t]{2.26in}
+      \hfill\begin{minipage}{2.11in}\centering\caption{S3}\label{fig:c-s5}\end{minipage}\hspace*{0.05in}
+      \par\includegraphics{experiments/crash_recovery/figures/grid/S5.pdf}
+    \end{subfigure}
+
+    \par\medskip
+    \begin{subfigure}[t]{2.78in}
+      \hfill\begin{minipage}{2.11in}\centering\caption{S4}\label{fig:c-s10}\end{minipage}\hspace*{0.05in}
+      \par\includegraphics{experiments/crash_recovery/figures/grid/S10.pdf}
+    \end{subfigure}\hfill
+    \begin{subfigure}[t]{2.26in}
+      \hfill\begin{minipage}{2.11in}\centering\caption{S5}\label{fig:c-s11}\end{minipage}\hspace*{0.05in}
+      \par\includegraphics{experiments/crash_recovery/figures/grid/S11.pdf}
+    \end{subfigure}\hfill
+    \begin{subfigure}[t]{2.26in}
+      \hfill\begin{minipage}{2.11in}\centering\caption{S6}\label{fig:c-s12}\end{minipage}\hspace*{0.05in}
+      \par\includegraphics{experiments/crash_recovery/figures/grid/S12.pdf}
+    \end{subfigure}
+    \par\smallskip
+    \makebox[7.30in][l]{\hspace*{0.62in}\makebox[6.63in][c]{\small Time after the crash (s)}}%
+    \end{minipage}}
+  \caption{Breakdown of faulting scenarios during migration.}
+  \label{fig:crashes}
+\end{figure*}
+
+\subsection{The cost of a bigger recipient shard group}
+\label{sec:eval-replicas}
+
+\texttt{TRANSFER\_DURABLE($G_i$)} is committed once a majority of the shard group holds that data.
+The bigger the shard group, the longer the chain replication takes (the time until a majority is reached).
+Figure~\ref{fig:replicas} shows the same no-fault migration for shard groups with 3 replicas (Figure~\ref{fig:replicas}a) and 5 replicas (Figure~\ref{fig:replicas}b).
+On the y axis we see the phases of the migration and on the x axis we see the time of migration for four groups.
+
+The donor's transfer is the same in the two runs, and so is the index update, both 0.50s to 0.51s per group.
+What changes is the chain replication and the async chain replication.
+With three replicas the group is durable once two replicas hold it, the leader and F1, which is one hop and takes 0.50s to 0.51s per group.
+With five replicas it is durable once three replicas hold it, the leader, F1 and F2, which is two hops and takes 1.07s to 1.26s per group.
+Over the four groups this is 2.22s against 2.99s, a penalty of 0.77s.
+The extra cost is the time of the extra hop and no extra work for the group, with the benefit of one more tolerated failure.
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics{experiments/replica_count/figures/replicas_3v5.pdf}
+  \caption{3 replicas vs 5 replicas.}
+  \label{fig:replicas}
+\end{figure*}
+
+\FloatBarrier

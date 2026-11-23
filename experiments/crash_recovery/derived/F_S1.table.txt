@@ -1,0 +1,19 @@
+== S1  kills: redis3 at +0.00
+  sg4: failure detection (election timeout) -> pre-candidate                      +0.00 ->  +1.50  =  1.50 s
+  sg4: election (pre-vote + vote) -> new leader                                   +1.50 ->  +1.51  =  0.01 s
+  sg4 new leader: INDEX UPDATE of durable data (then serves)                      +1.51 ->  +1.51  =  0.00 s
+  sg4 new leader: probe peers + donor for durable state                           +1.51 ->  +1.61  =  0.10 s
+  sg1: donor decides the roll-forward (re-home / resume plan)                     +1.51 ->  +1.54  =  0.03 s
+  sg1: donor decides the roll-forward (re-home / resume plan)                     +1.51 ->  +1.61  =  0.10 s
+  sg1 re-ship: setup                                                              +1.61 ->  +1.72  =  0.11 s
+  sg1 re-ship: copy donor -> recipient leader                                     +1.72 ->  +2.23  =  0.51 s
+  sg4 re-ship: replication leader -> F1                                           +1.86 ->  +2.36  =  0.50 s
+  sg4 re-ship: INDEX UPDATE (leader merge, gated on F1 holding each block)        +1.86 ->  +2.36  =  0.50 s
+  sg1 re-ship: durable -> TXN_DONE + NARROW                                       +2.37 ->  +2.38  =  0.01 s
+  sg4 new leader: rebuild replication chain (dead-peer connect timeout)           +1.51 ->  +1.64  =  0.12 s
+  CLIENT pair A keys in flight (29 keys): outage median (typical -0.05 -> +1.99)  +0.00 ->  +1.99  =  1.99 s
+  CLIENT pair A keys in flight (29 keys): outage max                              +0.00 ->  +2.59  =  2.59 s
+  CLIENT pair A keys in flight: served again (median key)                         +0.00 ->  +1.99  =  1.99 s
+  CLIENT unaffected keys: outage median (probe threads stuck on dead keys)        +0.00 ->  +0.13  =  0.13 s
+  CLIENT unaffected keys: outage max                                              +0.00 ->  +2.37  =  2.37 s
+wrote derived/F_S1.png

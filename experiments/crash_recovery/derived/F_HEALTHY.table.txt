@@ -1,0 +1,2 @@
+== HEALTHY  no fault (t=0 is the migration start)
+wrote derived/F_HEALTHY.png

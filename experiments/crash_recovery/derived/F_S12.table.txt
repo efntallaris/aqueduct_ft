@@ -1,0 +1,22 @@
+== S12  kills: redis3 at +0.00
+  sg4: failure detection (election timeout) -> pre-candidate                      +0.00 ->  +1.73  =  1.73 s
+  sg4: election (pre-vote + vote) -> new leader                                   +1.73 ->  +1.74  =  0.01 s
+  sg4 new leader: INDEX UPDATE of durable data (then serves)                      +1.74 ->  +1.74  =  0.00 s
+  sg4 new leader: probe peers + donor for durable state                           +1.74 ->  +1.75  =  0.02 s
+  sg1: donor decides the roll-forward (re-home / resume plan)                     +1.75 ->  +1.78  =  0.03 s
+  sg1: donor decides the roll-forward (re-home / resume plan)                     +1.74 ->  +2.42  =  0.68 s
+  sg1 re-ship: setup                                                              +2.42 ->  +2.44  =  0.01 s
+  sg1 re-ship: copy donor -> recipient leader                                     +2.44 ->  +2.95  =  0.51 s
+  sg4 re-ship: replication leader -> F1                                           +2.57 ->  +3.33  =  0.76 s
+  sg4 re-ship: INDEX UPDATE (leader merge, gated on F1 holding each block)        +2.57 ->  +3.33  =  0.76 s
+  sg1 re-ship: durable -> TXN_DONE + NARROW                                       +3.34 ->  +3.35  =  0.01 s
+  sg4 new leader: rebuild replication chain (dead-peer connect timeout)           +1.74 ->  +1.78  =  0.04 s
+  CLIENT pair A keys in flight (13 keys): outage median (typical -0.10 -> +1.85)  +0.00 ->  +1.85  =  1.85 s
+  CLIENT pair A keys in flight (13 keys): outage max                              +0.00 ->  +2.15  =  2.15 s
+  CLIENT pair A keys in flight: served again (median key)                         +0.00 ->  +1.85  =  1.85 s
+  CLIENT pair A keys moved (16 keys): outage median (typical -0.10 -> +1.78)      +0.00 ->  +1.78  =  1.78 s
+  CLIENT pair A keys moved (16 keys): outage max                                  +0.00 ->  +2.14  =  2.14 s
+  CLIENT pair A keys moved: served again (median key)                             +0.00 ->  +1.78  =  1.78 s
+  CLIENT unaffected keys: outage median (probe threads stuck on dead keys)        +0.00 ->  +0.11  =  0.11 s
+  CLIENT unaffected keys: outage max                                              +0.00 ->  +1.87  =  1.87 s
+wrote derived/F_S12.png
