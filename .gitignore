@@ -46,3 +46,9 @@ latex.out/
 ## derived JSON/CSV under experiments/*/derived/ are committed, so a clone without the
 ## logs still compiles the paper.
 experiments/*/data/
+
+## Dated pre-reorg snapshots of the sources. They were tracked until 2026-11-23 and
+## now live outside the repository, next to the parked conclusion, at
+##   ../aqueduct_ft_stash/backups/
+## Git history is the real backup: the snapshots as committed are still in d014b49.
+backups/
