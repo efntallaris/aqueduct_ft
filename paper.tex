@@ -53,7 +53,18 @@ Second Institution
 \maketitle
 
 \begin{abstract}
-Abstract goes here. USENIX asks for no more than 200 words, preferably closer to 150.
+Distributed in-memory key-value stores rebalance continuously, and the clients they serve pay for it.
+The unit a store rebalances, a hash slot or a token range, is not the unit it stores.
+A general-purpose allocator scatters a slot's records across the heap, so moving a slot is a random walk over memory with a copy on each side.
+
+We present \OurImplementation{}, a fault-tolerant elastic in-memory key-value store.
+Its allocator, SAMM, gives every large block a single slot as its exclusive owner, so a partition's footprint is a block list that the donor writes straight into the recipient's memory with one-sided RDMA.
+Nothing is gathered, packed or copied.
+That choice forces a fault-tolerance decision, because the recipient's CPU never sees the data arrive and cannot judge it safe.
+\OurImplementation{}'s migration protocol records each migration group in both replicated logs and rests on one durability invariant, so recovery always rolls a migration forward.
+
+On a 12-node RDMA cluster \OurImplementation{} moves 80.7GB in 7.09s at 91.1Gb/s with no visible cost to YCSB clients.
+Across six crash scenarios every migration completes with no lost write, and failure detection, not the protocol, dominates the two to three seconds a crash adds.
 \end{abstract}
 
 \input{background.tex}
