@@ -162,6 +162,29 @@ If no \texttt{DURABLE} follows the donor's \texttt{RDMA\_DONE($G_i$)}, it sends 
 It repeats the query whenever that \texttt{QUERY\_STATE($G_i$)} RPC goes unanswered, or whenever no \texttt{DURABLE} follows a \texttt{TRANSFERRED} reply or a new transfer.
 A newly elected recipient leader gives the replicas one heartbeat interval to report their flags, and counts a silent replica as lacking the data.
 
+% FLOAT PLACEMENT: Figure~\ref{fig:healthy} belongs to the evaluation and is
+% DECLARED HERE ONLY so it can reach the top of the page the evaluation opens on.
+% A full-width figure* is never placed on the page being typeset when LaTeX reads
+% it, so declared in evaluation.tex it could not land earlier than the page after.
+% Move it back into evaluation.tex if the text above it changes length.
+\begin{figure*}[t]
+  \centering
+  \begin{subfigure}[t]{4.56in}
+    \hspace*{1.020in}\begin{minipage}{3.46in}\centering
+      \caption{the phases of all three donor--recipient pairs}\label{fig:healthy-phases}
+    \end{minipage}
+    \par\centering\includegraphics{experiments/crash_recovery/figures/HEALTHY.pdf}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{2.40in}
+    \hspace*{0.162in}\begin{minipage}{2.22in}\centering
+      \caption{what the clients see over the same run}\label{fig:healthy-ycsb}
+    \end{minipage}
+    \par\centering\vspace*{0.154in}\includegraphics{experiments/crash_recovery/figures/healthy_ycsb.pdf}
+  \end{subfigure}
+  \caption{No-fault migration.}
+  \label{fig:healthy}
+\end{figure*}
+
 \iffalse
 Fig.~\ref{fig:recipient_recovery} shows a recipient leader crash: B1 crashes after receiving $G_i$ but before replicating it, so the new leader B2 finds $G_i$ in flight without holding its data, obtains it again from the donor, and completes the migration.
 

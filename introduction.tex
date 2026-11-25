@@ -1,52 +1,18 @@
 \section{Introduction}
 \label{sec:introduction}
 
-Distributed in-memory key-value stores serve the hot path of large online services, and the load they carry is neither uniform nor stable.
-Working sets grow, individual keys turn hot, and tenants arrive and leave.
-Operators answer by moving data between servers, and production systems do this continuously rather than occasionally~\cite{akkio,slicer,shard-manager}.
-Rebalancing is not an exceptional maintenance event.
-It is part of normal operation, and its cost is paid by the clients being served while it runs.
-
-A store names its data in partitions but does not store it that way.
-The keyspace is divided into logical units, a hash slot or a token range, and rebalancing moves one such unit at a time~\cite{redisclusterconfig,cassandra-paper,dynamodb}.
-Physical placement, however, is decided by a general-purpose allocator such as jemalloc~\cite{jemalloc} or TCMalloc~\cite{tcmalloc}, which puts a record wherever a size class has room.
-The records of one slot therefore end up interleaved with the records of every other slot across the heap.
-Moving a slot means traversing the global hash index, dereferencing one pointer per key, and gathering the results into a buffer.
-The work is a random walk over memory, so migration is bounded by memory-access latency rather than by the network, and the data has to be copied once to leave the donor and once more to be placed at the recipient~\cite{rocksteady,netmigrate}.
-Disk-based stores do not have this problem, because an SSTable already holds a token range contiguously~\cite{bigtable}.
-In-memory stores have no such structure.
-
-\OurImplementation{} starts from the observation that this mismatch is not inherent.
-An allocator that knows which slot a record belongs to can place the records of a slot together, and then the partition the system rebalances is also the region of memory it has to move.
-Our first contribution, SAMM, builds this into the allocator.
-SAMM is a slot-aware overlay that interposes between the store and a commodity allocator, acquiring large aligned blocks and giving each one a single slot as its exclusive owner.
-A slot's memory footprint is then a linked list of blocks that the allocator can name directly, and migration becomes a short sequence of large contiguous transfers.
-The donor writes blocks it already holds with one-sided RDMA.
-The recipient receives them into their final location and rebuilds only its index.
-Neither side copies a record and neither side packs or unpacks a buffer, so migration takes almost no CPU away from foreground requests.
-
-Making the bulk transfer cheap moves the difficulty elsewhere.
-Because the donor writes directly into the recipient's memory with one-sided operations, the recipient's CPU never observes the data arriving, so the recipient cannot itself decide that the data has become safe.
-The established approaches do not carry over.
-Rocksteady~\cite{rocksteady} replays a log at the destination and defers re-replication, which presumes a destination that processes every record it receives.
-Under a bulk transfer there is nothing to replay, and a crash mid-transfer can leave data sitting in a registered buffer that no live replica knows about.
-The layout decision thus forces a fault-tolerance decision, and the two contributions of this paper are one idea rather than two.
-
-Our second contribution is a migration protocol that makes a bulk, zero-copy transfer safe under crash failures.
-A migration is one transaction over a sequence of migration groups, and each group's progress is recorded by four entries in the donor's and the recipient's replicated logs.
-A single invariant carries the design.
-Once \texttt{TRANSFER\_DURABLE($G_i$)} commits, a majority of the recipient group holds the data of that group, so any newly elected leader can either serve the group or fetch it from a peer.
-Recovery rolls the transaction forward rather than back.
-A crash costs exactly the re-transfer of the groups whose data it destroyed, and a group that was already durable is never redone.
-
-We implement both in \OurImplementation{}, a fault-tolerant elastic in-memory key-value store, and evaluate it on CloudLab over RDMA.
-\textcolor{red}{TBD: SAMM migration throughput against a scattered layout, and the steady-state and memory-overhead cost of paying for it.}
-Across six scenarios that crash a donor leader, a recipient leader, or both in the middle of the migration, every run finishes the migration, passes a linearizability check with no lost writes, and costs the transaction two to three extra seconds, most of which is the consensus layer's failure-detection timeout rather than anything the protocol does.
-\textcolor{red}{TBD: the hotspot-tracking result, i.e.\ the rebalancing regime that only a cheap migration makes reachable.}
-
-In summary, this paper makes the following contributions.
+%
+Our contributions are :
 \begin{itemize}
-  \item SAMM, a slot-aware overlay allocator that makes a keyspace partition the unit of physical memory layout, so that rebalancing moves memory rather than gathering records (Section~\ref{sec:samm}).
-  \item A fault-tolerant migration protocol for bulk, zero-copy transfers, which keeps committed writes and partially migrated data safe across crashes on either side and always rolls a migration forward to completion (Section~\ref{sec:protocol}).
-  \item An implementation and an evaluation on an RDMA cluster, including a crash suite in which every run is checked for linearizability, and a measurement of what a bigger recipient shard group costs the critical path (Section~\ref{sec:evaluation}).
+\item We implemented a migration protocol which is integrated with a linearizable replication protocol (such as Raft).
+\item RDMA transfers between replicas within shard take place through a chain-replication variant 
+while migration control actions are still replicated via Raft.
+\item Migration actions are transactional and are recoverable under a variety of failures.
+\item Experiments demonstrate that \OurImplementation{} can migrate shards between replica groups only \% 
+slower than non-replicated Aqueduct, whereas RAMCloud variants such as Rocksteady are signifantly impacted in replicated settings.
+\item Under crash failures, \OurImplementation{} can recover a migration transaction in less than xx seconds and complete it, 
+with a less than \% percent slowdown compared to failure-free migration.
 \end{itemize}
+
+
+Existing solutions consider migration and replication two different actions. In our case we integrate migration into replication

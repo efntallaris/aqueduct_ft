@@ -21,6 +21,7 @@
   \label{tab:scenarios}
 \end{table}
 
+
 \begin{figure*}[tb]
   \centering
   \includegraphics{experiments/baselines/figures/baselines_legend.pdf}\\[1pt]
@@ -68,23 +69,6 @@ Table~\ref{tab:scenarios} lists the six scenarios.
 \subsection{The failure-free case}
 \label{sec:eval-healthy}
 
-\begin{figure*}[t]
-  \centering
-  \begin{subfigure}[t]{4.56in}
-    \hspace*{1.020in}\begin{minipage}{3.46in}\centering
-      \caption{the phases of all three donor--recipient pairs}\label{fig:healthy-phases}
-    \end{minipage}
-    \par\centering\includegraphics{experiments/crash_recovery/figures/HEALTHY.pdf}
-  \end{subfigure}\hfill
-  \begin{subfigure}[t]{2.40in}
-    \hspace*{0.162in}\begin{minipage}{2.22in}\centering
-      \caption{what the clients see over the same run}\label{fig:healthy-ycsb}
-    \end{minipage}
-    \par\centering\vspace*{0.154in}\includegraphics{experiments/crash_recovery/figures/healthy_ycsb.pdf}
-  \end{subfigure}
-  \caption{No-fault migration.}
-  \label{fig:healthy}
-\end{figure*}
 
 \begin{figure*}[tp]
   \centering
@@ -115,7 +99,73 @@ Throughput and latency do not have any impact throughout the migration.
 \subsection{Comparison against the state of the art}
 \label{sec:eval-sota}
 
-\textcolor{red}{TBD}
+{\color{red}
+In Figure~\ref{fig:baselines-both} we see \OurImplementation{}, \OurImplementation{} + FT
+and Rocksteady~\cite{rocksteady}, for workloads YCSB-A (Fig.~\ref{fig:baselines5050}) and
+YCSB-B (Fig.~\ref{fig:baselines}).
+On the y axis we show the YCSB throughput in kops/s and the read latency in ms, and on
+the x axis we show the time of the run, for the three systems under a 95/5 read/update
+mix and under an even read/write split.
+Every panel is drawn at its own measured height on logarithmic axes, so each curve is
+read against its own flat start and not against the height of its neighbour.
+Rocksteady runs on RAMCloud rather than Redis, which is why its latencies sit two decades
+below the other two panels.
+That offset is a property of the stores and not of migration, so the comparison below is
+about the shape of each curve and the width of its migration window.
+
+\paragraph{What fault tolerance costs.}
+Replication costs steady-state throughput and almost no migration time.
+Every number below is the median over the flat part of the run rather than a single
+second, which the first seconds of a run are too noisy to stand in for.
+On the 95/5 mix \OurImplementation{} serves 214.5kops/s before the migration and
+191.4kops/s with the fault-tolerant protocol, and after the scale-out the two settle at
+395.3 and 350.4kops/s, which is 10.8\% and 11.4\% lower.
+On the even split the same four numbers are 176.6 against 158.8kops/s before and 316.9
+against 282.2kops/s after, which is 10.1\% and 11.0\%.
+The read latency moves by about as much, from 3.69 to 4.16ms before the migration on the
+95/5 mix and from 4.45 to 4.97ms on the even split, which is 12.9\% and 11.7\%.
+The overhead is therefore close to one ninth of the throughput, and it is the same one
+ninth on both mixes.
+That is the interesting part.
+If the cost were mostly the consensus path taken on each write, the even split would pay
+far more than a workload that is 95\% reads, and it does not.
+A cost that flat points at the replicas themselves, which occupy CPU and NIC on the same
+ten nodes whether or not a write is in flight.
+What does not move is the migration itself.
+The window is 7s without replication and 6s with it on the 95/5 mix, and 7s in both runs
+on the even split, and the dip inside that window is 7\% against 6\% and 4\% against 4\%.
+The inside of the protocol explains why.
+A group is durable once a majority of the recipient shard group holds it, which is one
+chain hop at three replicas and takes 0.50--0.51s per group, and the donor transfer and
+the index update cost 0.50--0.51s each over the same group.
+The replication hop runs against the transfer of the next group rather than after it, so
+the four groups add 2.22s of chain replication without lengthening the window.
+The cost of fault tolerance is therefore paid continuously, in the throughput the extra
+replicas consume, and not as a longer or deeper interruption.
+
+\paragraph{Against Rocksteady.}
+The difference between the two systems is the depth and the length of the degraded
+window.
+On the 95/5 mix \OurImplementation{} with fault tolerance loses 6\% of its throughput for
+6s, while Rocksteady falls from 445 to 128kops/s, which is 71\% of its throughput, and
+does not reach its new plateau for 77s.
+On the even split the same comparison is 4\% for 7s against a fall from 225 to 149kops/s,
+or 34\%, held for 65s.
+The degraded window is therefore about an order of magnitude longer, 11$\times$ on the
+95/5 mix and 9$\times$ on the even split.
+Rocksteady does recover to a higher plateau than it started from, 744 and 450kops/s, but
+that is its own testbed scaling out and is not comparable to the Redis numbers above.
+The tail behaves the same way.
+Its median read goes from 19 to 45$\mu$s during the migration and its 99.9th percentile
+from 62 to 274$\mu$s, which is a factor of 4.4 and agrees with the 40 and 250$\mu$s the
+Rocksteady paper reports for the same experiment.
+This follows from how each protocol moves data.
+Rocksteady pulls records on demand and defers re-replication until after the migration,
+so it reaches its destination quickly and pays for it with a long stretch in which the
+client sees a partly migrated store.
+\OurImplementation{} moves one group at a time and makes that group durable before it
+cuts over, which bounds what the client sees to the 6--7s the four groups take.
+}
 
 \definecolor{cgOne}{HTML}{2E2E2E}\definecolor{cgTwo}{HTML}{646464}%
 \definecolor{cgThree}{HTML}{A3A3A3}\definecolor{cgFour}{HTML}{D6D6D6}%
