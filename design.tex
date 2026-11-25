@@ -8,16 +8,6 @@
 
 SAMM is a semantic overlay allocator. It interposes a slot-aware region-management layer between the application and a commodity allocator (e.g., jemalloc~\cite{jemalloc}), without replacing it. The architecture is hierarchical, as shown in Figure~\ref{fig:samm-arch}.
 
-\newsavebox{\sammArchBox}\sbox{\sammArchBox}{\input{illustrations/samm_arch.tex}}
-\newsavebox{\sammLayoutBox}\sbox{\sammLayoutBox}{\resizebox{0.8\columnwidth}{!}{\input{illustrations/samm.tex}}}
-\newlength{\sammFigH}\setlength{\sammFigH}{\dimexpr\ht\sammLayoutBox+\dp\sammLayoutBox\relax}
-
-\begin{figure}[t]
-  \centering
-  \parbox[c][\sammFigH][c]{\columnwidth}{\centering\usebox{\sammArchBox}}
-  \caption{SAMM four-layer architecture. Jemalloc provides coarse-grained blocks. SAMM enforces slot ownership and manages intra-block segments.}
-  \label{fig:samm-arch}
-\end{figure}
 
 At the lowest layer, jemalloc supplies large aligned memory blocks. SAMM acquires these blocks, tags each one with a slot owner, and registers it in a central slot table. No block is ever shared between two slots. Within each block, SAMM manages variable-sized segments, one per key-value pair. Allocation, deallocation, and segment reuse are governed by a per-slot free list that threads across all blocks belonging to that slot.
 
@@ -27,12 +17,6 @@ At the lowest layer, jemalloc supplies large aligned memory blocks. SAMM acquire
 \label{sec:samm-block-layout}
 \label{sec:samm-segments}
 
-\begin{figure}[t]
-  \centering
-  \parbox[c][\sammFigH][c]{\columnwidth}{\centering\usebox{\sammLayoutBox}}
-  \caption{SAMM memory layout. Each slot owns a doubly linked list of blocks, and each block holds variable-size segments of that slot only, between a prologue and an epilogue. Free segments of a slot form one free list that can span its blocks.}
-  \label{fig:samm}
-\end{figure}
 
 \paragraph{Slot table.}
 The slot table is a flat array indexed by slot identifier. Each entry represents one keyspace partition and tracks:

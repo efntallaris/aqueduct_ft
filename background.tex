@@ -26,3 +26,23 @@ During slot migration, the server must traverse its global hash table, identify 
 \label{sec:motivation-experiment}
 
 \textcolor{red}{TBD: Motivation}
+
+\newsavebox{\sammArchBox}\sbox{\sammArchBox}{\input{illustrations/samm_arch.tex}}
+\newsavebox{\sammLayoutBox}\sbox{\sammLayoutBox}{\resizebox{0.8\columnwidth}{!}{\input{illustrations/samm.tex}}}
+\newlength{\sammFigH}\setlength{\sammFigH}{\dimexpr\ht\sammLayoutBox+\dp\sammLayoutBox\relax}
+
+\begin{figure*}[t]
+  \centering
+  \begin{minipage}[t]{0.49\textwidth}
+    \centering
+    \parbox[c][\sammFigH][c]{\linewidth}{\centering\usebox{\sammArchBox}}
+    \caption{SAMM four-layer architecture. Jemalloc provides coarse-grained blocks. SAMM enforces slot ownership and manages intra-block segments.}
+    \label{fig:samm-arch}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.49\textwidth}
+    \centering
+    \parbox[c][\sammFigH][c]{\linewidth}{\centering\usebox{\sammLayoutBox}}
+    \caption{SAMM memory layout. Each slot owns a doubly linked list of blocks, and each block holds variable-size segments of that slot only, between a prologue and an epilogue. Free segments of a slot form one free list that can span its blocks.}
+    \label{fig:samm}
+  \end{minipage}
+\end{figure*}
