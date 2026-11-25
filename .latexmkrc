@@ -5,3 +5,9 @@
 system("make -s figures") == 0 or warn "figure regeneration failed, using the committed PDFs\n";
 
 $pdf_mode = 1;
+
+# paper.bbl is maintained BY HAND and is tracked in git. Never regenerate it: bibtex
+# rewrites the entries, which among other things puts back the \newblock commands that
+# were deliberately removed. 0 means "never run bibtex, use the .bbl that is there".
+# Set it back to 1 only if the bibliography is to be rebuilt from paper.bib on purpose.
+$bibtex_use = 0;

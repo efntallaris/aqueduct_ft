@@ -13,14 +13,11 @@
 \definecolor{line}{HTML}{1B2944}
 \begin{tikzpicture}[font=\sffamily\bfseries, node distance=0cm]
 
-% Define the styles for the blocks
-%\tikzstyle{block} = [rectangle, draw, thick, line width=0.4mm, text centered, text=white, minimum height=3cm, minimum width=3cm, font=\sffamily\bfseries\fontsize{18}{20}\selectfont]
 \tikzstyle{block} = [rectangle, thick, line width=0.5mm, draw=line, text centered, text=customColor2, minimum height=3cm, minimum width=3cm, font=\sffamily\bfseries\fontsize{18}{20}\selectfont]
 
 \tikzstyle{segment_kv} = [block, fill=lightGray]
 \tikzstyle{segment_header} = [block, fill=medGray]
 
-% Nodes
 \node (segment_header) [segment_header, align=center] {Segment \\ Header \\ 4 bytes};
 \node (key_meta) [segment_kv,right=of segment_header.east, align=center] {Key \\ Meta \\ 24 bytes};
 \node (value_meta) [segment_kv,right=of key_meta.east, align=center] {Value \\ Meta \\ 24 bytes};

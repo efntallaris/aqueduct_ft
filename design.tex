@@ -63,10 +63,10 @@ When SAMM needs a new block for a slot, it invokes the arena's alloc hook, recei
     \toprule
     \multicolumn{1}{c}{\textbf{Entry}} & \textbf{Log} & \multicolumn{1}{c}{\textbf{Use}} \\
     \midrule
-    \texttt{START($G_i$)}         & donor     & resume $G_i$ after a crash \\
-    \texttt{TXN\_START($G_i$)}    & recipient & keep tombstones for $G_i$ \\
-    \texttt{TRANSFER\_DURABLE($G_i$)} & recipient & stop double reads for $G_i$ \\
-    \texttt{DONE($G_i$)}          & donor     & skip $G_i$ on recovery \\
+    \texttt{START($G_i$)}         & donor     & a new leader knows to resume $G_i$ \\
+    \texttt{TXN\_START($G_i$)}    & recipient & tombstones are kept from here on \\
+    \texttt{TRANSFER\_DURABLE($G_i$)} & recipient & clients can stop double reads \\
+    \texttt{DONE($G_i$)}          & donor     & recovery skips $G_i$ \\
     \bottomrule
   \end{tabular*}
   \caption{Replicated-log entries of group $G_i$.}
@@ -88,9 +88,9 @@ When SAMM needs a new block for a slot, it invokes the arena's alloc hook, recei
 We consider a KVS that (i) partitions the key space into logical units such as shards or slots, (ii) replicates each partition across a set of replicas using a leader-based replication protocol~\cite{raft,paxos-simple,chain-replication} with synchronous writes, and (iii) runs on replicas that fail by crashing (\textcolor{blue}{\emph{fail-stop}}).
 
 We call the replicas of a partition a \emph{shard group}. One replica acts as the leader and the others as followers. The leader appends writes and other commands to the group's \emph{replicated log}, and an entry is committed only after it has been durably stored by a majority of the shard group.
-A crashed replica loses its in-memory state. It may later rejoin its shard group as a new member and obtain its state from the other replicas through the replication protocol.
+A crashed replica loses its in-memory state, but can rejoin later a shard group as a new member and obtain its state from the other replicas through the replication protocol.
 Failed replicas are eventually detected by the others, e.g., through timeouts or broken connections.
-At most $f$ of the $2f+1$ replicas of each shard group fail. Every committed update, and the data that is being migrated, therefore survives on at least one replica.
+A shard group of $2f+1$ can survice at most $f$ failures. This ensures that every committed update, and the data that is being migrated, survives on at least one replica.
 
 An elasticity operation involves two shard groups, a \emph{donor} shard group that currently owns the data being migrated, and a \emph{recipient} shard group that will assume ownership.
 Migration proceeds concurrently with client requests.

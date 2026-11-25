@@ -2,204 +2,146 @@
 
 \bibitem{redisclusterconfig}
 Redis cluster specification.
-\newblock Accessed 2025-04-27.
+Accessed 2025-04-27.
 
 \bibitem{slicer}
-Atul Adya, Daniel Myers, Jon Howell, Jeremy Elson, Colin Meek, Vishesh Khemani,
-  Stefan Fulger, Pan Gu, Lakshminath Bhuvanagiri, Jason Hunter, Roberto Peon,
-  Larry Kai, Alexander Shraer, Arif Merchant, and Kfir Lev-Ari.
-\newblock Slicer: Auto-sharding for datacenter applications.
-\newblock In {\em Proceedings of the 12th USENIX Symposium on Operating Systems
-  Design and Implementation (OSDI '16)}. USENIX Association, 2016.
+Atul Adya, Daniel Myers, Jon Howell, Jeremy Elson, Colin Meek, Vishesh Khemani, Stefan Fulger, Pan Gu, Lakshminath Bhuvanagiri, Jason Hunter, Roberto Peon, Larry Kai, Alexander Shraer, Arif Merchant, and Kfir Lev-Ari.
+Slicer: Auto-sharding for datacenter applications.
+In {\em Proceedings of the 12th USENIX Symposium on Operating Systems Design and Implementation (OSDI '16)}. USENIX Association, 2016.
 
 \bibitem{akkio}
-Muthukaruppan Annamalai, Kaushik Ravichandran, Harish Srinivas, Igor Zinkovsky,
-  Luning Pan, Tony Savor, David Nagle, and Michael Stumm.
-\newblock Sharding the shards: Managing datastore locality at scale with
-  {Akkio}.
-\newblock In {\em Proceedings of the 13th USENIX Symposium on Operating Systems
-  Design and Implementation (OSDI '18)}. USENIX Association, 2018.
+Muthukaruppan Annamalai, Kaushik Ravichandran, Harish Srinivas, Igor Zinkovsky, Luning Pan, Tony Savor, David Nagle, and Michael Stumm.
+Sharding the shards: Managing datastore locality at scale with {Akkio}.
+In {\em Proceedings of the 13th USENIX Symposium on Operating Systems Design and Implementation (OSDI '18)}. USENIX Association, 2018.
 
 \bibitem{Infiniband-spec}
 InfiniBand~Trade Association.
-\newblock Infiniband architecture specification, release 1.0, 2000, 2000.
-\newblock http://www.infinibandta.org/specs.
+Infiniband architecture specification, release 1.0, 2000, 2000.
+http://www.infinibandta.org/specs.
 
 \bibitem{atikoglu-kv-workload}
 Berk Atikoglu, Yuehai Xu, Eitan Frachtenberg, Song Jiang, and Mike Paleczny.
-\newblock Workload analysis of a large-scale key-value store.
-\newblock In {\em Proceedings of the 12th ACM SIGMETRICS/PERFORMANCE Joint
-  International Conference on Measurement and Modeling of Computer Systems},
-  pages 53--64, 2012.
+Workload analysis of a large-scale key-value store.
+In {\em Proceedings of the 12th ACM SIGMETRICS/PERFORMANCE Joint International Conference on Measurement and Modeling of Computer Systems}, pages 53--64, 2012.
 
 \bibitem{hoard_paper}
 Emery~D. Berger, Kathryn~S. McKinley, Robert~D. Blumofe, and Paul~R. Wilson.
-\newblock Hoard: A scalable memory allocator for multithreaded applications.
-\newblock In {\em Proceedings of the Ninth International Conference on
-  Architectural Support for Programming Languages and Operating Systems},
-  ASPLOS IX, page 117–128, New York, NY, USA, 2000. Association for Computing
-  Machinery.
+Hoard: A scalable memory allocator for multithreaded applications.
+In {\em Proceedings of the Ninth International Conference on Architectural Support for Programming Languages and Operating Systems}, ASPLOS IX, page 117–128, New York, NY, USA, 2000. Association for Computing Machinery.
 
 \bibitem{bigtable}
-Fay Chang, Jeffrey Dean, Sanjay Ghemawat, Wilson~C. Hsieh, Deborah~A. Wallach,
-  Mike Burrows, Tushar Chandra, Andrew Fikes, and Robert~E. Gruber.
-\newblock Bigtable: A distributed storage system for structured data.
-\newblock In {\em Proceedings of the 7th USENIX Symposium on Operating Systems
-  Design and Implementation (OSDI '06)}. USENIX Association, 2006.
+Fay Chang, Jeffrey Dean, Sanjay Ghemawat, Wilson~C. Hsieh, Deborah~A. Wallach, Mike Burrows, Tushar Chandra, Andrew Fikes, and Robert~E. Gruber.
+Bigtable: A distributed storage system for structured data.
+In {\em Proceedings of the 7th USENIX Symposium on Operating Systems Design and Implementation (OSDI '06)}. USENIX Association, 2006.
 
 \bibitem{ycsb}
-Brian~F. Cooper, Adam Silberstein, Erwin Tam, Raghu Ramakrishnan, and Russell
-  Sears.
-\newblock Benchmarking cloud serving systems with ycsb.
-\newblock In {\em Proceedings of the 1st ACM Symposium on Cloud Computing},
-  SoCC '10, page 143–154, New York, NY, USA, 2010. Association for Computing
-  Machinery.
+Brian~F. Cooper, Adam Silberstein, Erwin Tam, Raghu Ramakrishnan, and Russell Sears.
+Benchmarking cloud serving systems with ycsb.
+In {\em Proceedings of the 1st ACM Symposium on Cloud Computing}, SoCC '10, page 143–154, New York, NY, USA, 2010. Association for Computing Machinery.
 
 \bibitem{dynamodb}
-Giuseppe DeCandia, Deniz Hastorun, Madan Jampani, Gunavardhan Kakulapati,
-  Avinash Lakshman, Alex Pilchin, Swaminathan Sivasubramanian, Peter Vosshall,
-  and Werner Vogels.
-\newblock Dynamo: Amazon’s highly available key-value store.
-\newblock In {\em ACM Symposium on Operating System Principles}, 2007.
+Giuseppe DeCandia, Deniz Hastorun, Madan Jampani, Gunavardhan Kakulapati, Avinash Lakshman, Alex Pilchin, Swaminathan Sivasubramanian, Peter Vosshall, and Werner Vogels.
+Dynamo: Amazon’s highly available key-value store.
+In {\em ACM Symposium on Operating System Principles}, 2007.
 
 \bibitem{cloudlab}
-Dmitry Duplyakin, Robert Ricci, Aleksander Maricq, Gary Wong, Jonathon Duerig,
-  Eric Eide, Leigh Stoller, Mike Hibler, David Johnson, Kirk Webb, Aditya
-  Akella, Kuangching Wang, Glenn Ricart, Larry Landweber, Chip Elliott, Michael
-  Zink, Emmanuel Cecchet, Snigdhaswin Kar, and Prabodh Mishra.
-\newblock The design and operation of {CloudLab}.
-\newblock In {\em 2019 USENIX Annual Technical Conference (USENIX ATC 19)},
-  pages 1--14, Renton, WA, July 2019. USENIX Association.
+Dmitry Duplyakin, Robert Ricci, Aleksander Maricq, Gary Wong, Jonathon Duerig, Eric Eide, Leigh Stoller, Mike Hibler, David Johnson, Kirk Webb, Aditya Akella, Kuangching Wang, Glenn Ricart, Larry Landweber, Chip Elliott, Michael Zink, Emmanuel Cecchet, Snigdhaswin Kar, and Prabodh Mishra.
+The design and operation of {CloudLab}.
+In {\em 2019 USENIX Annual Technical Conference (USENIX ATC 19)}, pages 1--14, Renton, WA, July 2019. USENIX Association.
 
 \bibitem{dynamodb-atc22}
-Mostafa Elhemali, Niall Gallagher, Nicholas Gordon, Joseph Idziorek, Richard
-  Krog, Colin Lu, Somu Perianayagam, Akshat Rath, Swami Sivasubramanian,
-  James~Christopher Sorenson, and Akhilesh Vig.
-\newblock Amazon {DynamoDB}: A scalable, predictably performant, and fully
-  managed {NoSQL} database service.
-\newblock In {\em Proceedings of the 2022 USENIX Annual Technical Conference
-  (USENIX ATC '22)}, pages 1037--1048, 2022.
+Mostafa Elhemali, Niall Gallagher, Nicholas Gordon, Joseph Idziorek, Richard Krog, Colin Lu, Somu Perianayagam, Akshat Rath, Swami Sivasubramanian, James~Christopher Sorenson, and Akhilesh Vig.
+Amazon {DynamoDB}: A scalable, predictably performant, and fully managed {NoSQL} database service.
+In {\em Proceedings of the 2022 USENIX Annual Technical Conference (USENIX ATC '22)}, pages 1037--1048, 2022.
 
 \bibitem{jemalloc}
 Jason Evans.
-\newblock A scalable concurrent malloc(3) implementation for freebsd.
-\newblock In {\em Proc. of the bsdcan conference, ottawa, canada}, 2006.
+A scalable concurrent malloc(3) implementation for freebsd.
+In {\em Proc. of the bsdcan conference, ottawa, canada}, 2006.
 
 \bibitem{memc3}
 Bin Fan, David~G. Andersen, and Michael Kaminsky.
-\newblock {MemC3}: Compact and concurrent {MemCache} with dumber caching and
-  smarter hashing.
-\newblock In {\em Proceedings of the 10th USENIX Symposium on Networked Systems
-  Design and Implementation (NSDI '13)}. USENIX Association, 2013.
+{MemC3}: Compact and concurrent {MemCache} with dumber caching and smarter hashing.
+In {\em Proceedings of the 10th USENIX Symposium on Networked Systems Design and Implementation (NSDI '13)}. USENIX Association, 2013.
 
 \bibitem{fulva}
 Jiewen Hai, Cheng Wang, Xusheng Chen, Tsz~On Li, Heming Cui, and Sen Wang.
-\newblock Fulva: Efficient live migration for in-memory key-value stores with
-  zero downtime.
-\newblock In {\em 2019 38th Symposium on Reliable Distributed Systems (SRDS)},
-  pages 83--8309, 2019.
+Fulva: Efficient live migration for in-memory key-value stores with zero downtime.
+In {\em 2019 38th Symposium on Reliable Distributed Systems (SRDS)}, pages 83--8309, 2019.
 
 \bibitem{tcmalloc}
-A.H. Hunter, Chris Kennelly, Paul Turner, Darryl Gove, Tipp Moseley, and
-  Parthasarathy Ranganathan.
-\newblock Beyond malloc efficiency to fleet efficiency: a hugepage-aware memory
-  allocator.
-\newblock In {\em 15th {USENIX} Symposium on Operating Systems Design and
-  Implementation ({OSDI} 21)}, pages 257--273. {USENIX} Association, July 2021.
+A.H. Hunter, Chris Kennelly, Paul Turner, Darryl Gove, Tipp Moseley, and Parthasarathy Ranganathan.
+Beyond malloc efficiency to fleet efficiency: a hugepage-aware memory allocator.
+In {\em 15th {USENIX} Symposium on Operating Systems Design and Implementation ({OSDI} 21)}, pages 257--273. {USENIX} Association, July 2021.
 
 \bibitem{karger-consistent-hashing}
-David Karger, Eric Lehman, Tom Leighton, Rina Panigrahy, Matthew Levine, and
-  Daniel Lewin.
-\newblock Consistent hashing and random trees: Distributed caching protocols
-  for relieving hot spots on the world wide web.
-\newblock In {\em Proceedings of the 29th Annual ACM Symposium on Theory of
-  Computing (STOC '97)}, pages 654--663, 1997.
+David Karger, Eric Lehman, Tom Leighton, Rina Panigrahy, Matthew Levine, and Daniel Lewin.
+Consistent hashing and random trees: Distributed caching protocols for relieving hot spots on the world wide web.
+In {\em Proceedings of the 29th Annual ACM Symposium on Theory of Computing (STOC '97)}, pages 654--663, 1997.
 
 \bibitem{rocksteady}
 Chinmay Kulkarni, Aniraj Kesavan, Tian Zhang, Robert Ricci, and Ryan Stutsman.
-\newblock Rocksteady: Fast migration for low-latency in-memory storage.
-\newblock In {\em Proceedings of the 26th Symposium on Operating Systems
-  Principles}, SOSP '17, page 390–405, New York, NY, USA, 2017. Association
-  for Computing Machinery.
+Rocksteady: Fast migration for low-latency in-memory storage.
+In {\em Proceedings of the 26th Symposium on Operating Systems Principles}, SOSP '17, page 390–405, New York, NY, USA, 2017. Association for Computing Machinery.
 
 \bibitem{cassandra-paper}
 Avinash Lakshman and Prashant Malik.
-\newblock Cassandra: a decentralized structured storage system.
-\newblock {\em SIGOPS Oper. Syst. Rev.}, 44(2):35–40, April 2010.
+Cassandra: a decentralized structured storage system.
+{\em SIGOPS Oper. Syst. Rev.}, 44(2):35–40, April 2010.
 
 \bibitem{paxos-simple}
 Leslie Lamport.
-\newblock Paxos made simple.
-\newblock {\em ACM SIGACT News}, 32(4):51--58, 2001.
+Paxos made simple.
+{\em ACM SIGACT News}, 32(4):51--58, 2001.
 
 \bibitem{shard-manager}
-Sangmin Lee, Zhenhua Guo, Omer Sunercan, Jun Ying, Thawan Kooburat, Suryadeep
-  Biswal, Jun Chen, Kun Huang, Yatpang Cheung, Yiding Zhou, Kaushik
-  Veeraraghavan, Biren Damani, Pol~Mauri Ruiz, Vikas Mehta, and Chunqiang Tang.
-\newblock Shard manager: A generic shard management framework for
-  geo-distributed applications.
-\newblock In {\em Proceedings of the ACM SIGOPS 28th Symposium on Operating
-  Systems Principles (SOSP '21)}, 2021.
+Sangmin Lee, Zhenhua Guo, Omer Sunercan, Jun Ying, Thawan Kooburat, Suryadeep Biswal, Jun Chen, Kun Huang, Yatpang Cheung, Yiding Zhou, Kaushik Veeraraghavan, Biren Damani, Pol~Mauri Ruiz, Vikas Mehta, and Chunqiang Tang.
+Shard manager: A generic shard management framework for geo-distributed applications.
+In {\em Proceedings of the ACM SIGOPS 28th Symposium on Operating Systems Principles (SOSP '21)}, 2021.
 
 \bibitem{kvdirect}
-Bojie Li, Zhenyuan Ruan, Wencong Xiao, Yuanwei Lu, Yongqiang Xiong, Andrew
-  Putnam, Enhong Chen, and Lintao Zhang.
-\newblock Kv-direct: High-performance in-memory key-value store with
-  programmable nic.
-\newblock In {\em Proceedings of the 26th Symposium on Operating Systems
-  Principles}, SOSP '17, page 137–152, New York, NY, USA, 2017. Association
-  for Computing Machinery.
+Bojie Li, Zhenyuan Ruan, Wencong Xiao, Yuanwei Lu, Yongqiang Xiong, Andrew Putnam, Enhong Chen, and Lintao Zhang.
+Kv-direct: High-performance in-memory key-value store with programmable nic.
+In {\em Proceedings of the 26th Symposium on Operating Systems Principles}, SOSP '17, page 137–152, New York, NY, USA, 2017. Association for Computing Machinery.
 
 \bibitem{mica}
 Hyeontaek Lim, Dongsu Han, David~G. Andersen, and Michael Kaminsky.
-\newblock {MICA}: A holistic approach to fast in-memory key-value storage.
-\newblock In {\em Proceedings of the 11th USENIX Symposium on Networked Systems
-  Design and Implementation (NSDI '14)}, pages 429--444, 2014.
+{MICA}: A holistic approach to fast in-memory key-value storage.
+In {\em Proceedings of the 11th USENIX Symposium on Networked Systems Design and Implementation (NSDI '14)}, pages 429--444, 2014.
 
 \bibitem{scaling-memcache}
-Rajesh Nishtala, Hans Fugal, Steven Grimm, Marc Kwiatkowski, Herman Lee,
-  Harry~C. Li, Ryan McElroy, Mike Paleczny, Daniel Peek, Paul Saab, David
-  Stafford, Tony Tung, and Venkateshwaran Venkataramani.
-\newblock Scaling memcache at {Facebook}.
-\newblock In {\em Proceedings of the 10th USENIX Symposium on Networked Systems
-  Design and Implementation (NSDI '13)}. USENIX Association, 2013.
+Rajesh Nishtala, Hans Fugal, Steven Grimm, Marc Kwiatkowski, Herman Lee, Harry~C. Li, Ryan McElroy, Mike Paleczny, Daniel Peek, Paul Saab, David Stafford, Tony Tung, and Venkateshwaran Venkataramani.
+Scaling memcache at {Facebook}.
+In {\em Proceedings of the 10th USENIX Symposium on Networked Systems Design and Implementation (NSDI '13)}. USENIX Association, 2013.
 
 \bibitem{raft}
 Diego Ongaro and John Ousterhout.
-\newblock In search of an understandable consensus algorithm.
-\newblock In {\em Proceedings of the 2014 USENIX Annual Technical Conference
-  (USENIX ATC '14)}, pages 305--319. USENIX Association, 2014.
+In search of an understandable consensus algorithm.
+In {\em Proceedings of the 2014 USENIX Annual Technical Conference (USENIX ATC '14)}, pages 305--319. USENIX Association, 2014.
 
 \bibitem{rumble-log-memory}
 Stephen~M. Rumble, Ankita Kejriwal, and John Ousterhout.
-\newblock Log-structured memory for {DRAM}-based storage.
-\newblock In {\em Proceedings of the 12th USENIX Conference on File and Storage
-  Technologies (FAST '14)}, pages 1--16, 2014.
+Log-structured memory for {DRAM}-based storage.
+In {\em Proceedings of the 12th USENIX Conference on File and Storage Technologies (FAST '14)}, pages 1--16, 2014.
 
 \bibitem{lite-rdma}
 Shin-Yeh Tsai and Yiying Zhang.
-\newblock Lite kernel rdma support for datacenter applications.
-\newblock In {\em Proceedings of the 26th Symposium on Operating Systems
-  Principles}, SOSP '17, page 306–324, New York, NY, USA, 2017. Association
-  for Computing Machinery.
+Lite kernel rdma support for datacenter applications.
+In {\em Proceedings of the 26th Symposium on Operating Systems Principles}, SOSP '17, page 306–324, New York, NY, USA, 2017. Association for Computing Machinery.
 
 \bibitem{chain-replication}
 Robbert van Renesse and Fred~B. Schneider.
-\newblock Chain replication for supporting high throughput and availability.
-\newblock In {\em Proceedings of the 6th USENIX Symposium on Operating Systems
-  Design and Implementation (OSDI '04)}, pages 91--104, 2004.
+Chain replication for supporting high throughput and availability.
+In {\em Proceedings of the 6th USENIX Symposium on Operating Systems Design and Implementation (OSDI '04)}, pages 91--104, 2004.
 
 \bibitem{yang-twitter-cache}
 Juncheng Yang, Yao Yue, and K.~V. Rashmi.
-\newblock A large scale analysis of hundreds of in-memory cache clusters at
-  {Twitter}.
-\newblock In {\em Proceedings of the 14th USENIX Symposium on Operating Systems
-  Design and Implementation (OSDI '20)}, pages 191--208, 2020.
+A large scale analysis of hundreds of in-memory cache clusters at {Twitter}.
+In {\em Proceedings of the 14th USENIX Symposium on Operating Systems Design and Implementation (OSDI '20)}, pages 191--208, 2020.
 
 \bibitem{netmigrate}
 Zeying Zhu, Yibo Zhao, and Zaoxing Liu.
-\newblock {In-Memory} {Key-Value} store live migration with {NetMigrate}.
-\newblock In {\em 22nd USENIX Conference on File and Storage Technologies (FAST
-  24)}, pages 209--224, Santa Clara, CA, February 2024. USENIX Association.
+{In-Memory} {Key-Value} store live migration with {NetMigrate}.
+In {\em 22nd USENIX Conference on File and Storage Technologies (FAST 24)}, pages 209--224, Santa Clara, CA, February 2024. USENIX Association.
 
 \end{thebibliography}

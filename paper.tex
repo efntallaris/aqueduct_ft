@@ -14,12 +14,11 @@
 \usepackage{algpseudocode}
 
 
-% my archive
 \usetikzlibrary{arrows.meta,decorations.pathreplacing,patterns}
 \newcommand{\mstep}[1]{\tikz[baseline={([yshift=-0.34em]s.center)}]\node[circle,fill=black!85,text=white,inner sep=0pt,minimum size=8.4pt,text height=4.65pt,text depth=0.6pt,font=\fontsize{6.5}{6.5}\fontfamily{phv}\bfseries\selectfont](s){\ifnum#1=1 \kern0.72pt\fi#1};}%
 \usepackage{placeins}
 \renewcommand{\topfraction}{0.9}
-\setcounter{topnumber}{1}
+\setcounter{topnumber}{2}
 \widowpenalty=10000
 \clubpenalty=10000
 \renewcommand{\textfraction}{0.07}
@@ -33,6 +32,8 @@
 \newcommand{\fn}[1]{\textnormal{\textsc{#1}}}
 \algnewcommand{\Upon}[1]{\Statex \textbf{upon} #1 \textbf{do}}
 \algnewcommand{\EndUpon}{\Statex \textbf{end upon}}
+
+\newcommand{\added}[1]{\textcolor{blue!70!black}{#1}}
 
 \begin{document}
 
@@ -59,11 +60,6 @@ Abstract goes here. USENIX asks for no more than 200 words, preferably closer to
 \input{background.tex}
 \input{design.tex}
 \input{evaluation.tex}
-% The conclusion is parked outside the repository, at
-%   ../aqueduct_ft_stash/conclusion.tex
-% so it is not committed with the rest. Restore it by moving the file back here and
-% uncommenting the line below (AqRaft 2026-11-22).
-%\input{conclusion.tex}
 \input{migration_rdma_faq.tex}
 
 \bibliographystyle{plain}
