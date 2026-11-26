@@ -8,7 +8,6 @@
 %   "Existing solutions consider migration and replication two different actions.
 %    In our case we integrate migration into replication"
 % The numbers below are taken from Section~\ref{sec:evaluation} as it currently reads.
-{\color{red}
 
 Modern data centers absorb load variations by scaling their storage tier elastically:
 shards of the key space are redistributed across nodes while the store keeps serving
@@ -37,8 +36,8 @@ Bulk data moves from the donor to the recipient group through a variant of chain
 replication~\cite{chain-replication} that pipelines large RDMA~\cite{Infiniband-spec}
 transfers across the replicas of the recipient group, so that the replication of one group
 of slots overlaps the transfer of the next instead of following it.
-The control actions of a migration---when a group of slots starts moving, when its data
-has become durable, and when ownership changes hands---are appended to the replicated log
+The control actions of a migration (when a group of slots starts moving, when its data
+has become durable, and when ownership changes hands) are appended to the replicated log
 and therefore follow the standard replication protocol.
 
 Because those control actions are logged, \OurImplementation{} schedules a migration in
@@ -50,10 +49,9 @@ provisioned to survive.
 
 We evaluate \OurImplementation{} on a 12-node RDMA cluster~\cite{cloudlab} under
 YCSB~\cite{ycsb} workloads driven while migrations are in progress.
-Integrating replication into the migration costs close to one ninth of steady-state
-throughput, and costs that same fraction under a read-heavy and under a write-heavy
-workload, while the duration of the migration itself is unchanged at three replicas per
-shard group.
+Integrating replication into the migration costs 6.4\% of steady-state throughput under a
+read-heavy workload and 9.3\% under a write-heavy one, while the duration of the migration
+itself is unchanged at three replicas per shard group.
 A state-of-the-art system that does not integrate the two is affected far more severely:
 Rocksteady~\cite{rocksteady} loses 71\% of its throughput and takes 77s to reach its new
 plateau on the read-heavy workload, against 6\% for 6s for \OurImplementation{}.
@@ -67,12 +65,7 @@ In summary, our contributions in this paper are :
 \item RDMA transfers between replicas within shard take place through a chain-replication variant 
 while migration control actions are still replicated via Raft.
 \item Migration actions are transactional and are recoverable under a variety of failures.
-\item Experiments demonstrate that \OurImplementation{} can migrate shards between replica groups only \% 
-slower than non-replicated \OurImplementation{}, whereas RAMCloud variants such as Rocksteady are signifantly impacted in replicated settings.
-\item Under crash failures, \OurImplementation{} can recover a migration transaction in less than xx seconds and complete it, 
-with a less than \% percent slowdown compared to failure-free migration.
 \end{itemize}
 
 Section~\ref{sec:protocol} presents the fault-tolerant migration protocol and the failure
 model it assumes, and Section~\ref{sec:evaluation} evaluates it.
-}
