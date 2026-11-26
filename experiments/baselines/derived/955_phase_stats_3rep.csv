@@ -1,0 +1,4 @@
+phase,t_from,t_to,seconds,tput_mean_kops_s,tput_sd_kops_s,tput_min_kops_s,tput_max_kops_s,dip_vs_own_before,read_mean_ms,write_mean_ms
+before,3,19,17,233.8,3.7,225.5,238.3,0.964,3.087,9.721
+during,20,27,8,274.9,59.8,231.7,407.4,0.991,2.736,8.386
+after,28,88,61,428.0,11.0,398.2,444.9,1.703,1.696,5.134

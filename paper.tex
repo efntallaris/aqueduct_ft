@@ -23,6 +23,7 @@
 \usetikzlibrary{arrows.meta,decorations.pathreplacing,patterns}
 \newcommand{\mstep}[1]{\tikz[baseline={([yshift=-0.34em]s.center)}]\node[circle,fill=black!85,text=white,inner sep=0pt,minimum size=8.4pt,text height=4.65pt,text depth=0.6pt,font=\fontsize{6.5}{6.5}\fontfamily{phv}\bfseries\selectfont](s){\ifnum#1=1 \kern0.72pt\fi#1};}%
 \usepackage{placeins}
+\usepackage[normalem]{ulem}
 \renewcommand{\topfraction}{0.9}
 \setcounter{topnumber}{2}
 \widowpenalty=10000
@@ -40,6 +41,7 @@
 \algnewcommand{\EndUpon}{\Statex \textbf{end upon}}
 
 \newcommand{\added}[1]{\textcolor{blue!70!black}{#1}}
+\newcommand{\deleted}[1]{\sout{#1}}
 
 \begin{document}
 
@@ -82,11 +84,13 @@ Under crash failures, \OurImplementation{} can recover a migration transaction i
 \end{abstract}
 
 \input{introduction.tex}
-\input{background.tex}
 \input{design.tex}
 \input{evaluation.tex}
 \input{migration_rdma_faq.tex}
 
+% Background and Motivation (background.tex) and Design of SAMM (samm_design.tex) are
+% deliberately not compiled. Both files are kept on disk; re-add them with \appendices
+% followed by an \input of each to bring the appendix back.
 \bibliographystyle{plain}
 \bibliography{paper}
 \input{notes.tex}

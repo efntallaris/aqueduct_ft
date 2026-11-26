@@ -6,7 +6,7 @@ During migration a set of slots is being moved from a donor shard group to a rec
 A coordinator $C$ splits the slots into \emph{migration groups} $G_1, \dots, G_n$ and instructs the donor leader to migrate them to the recipient leader.
 Groups are moved in the form of a transaction, by the \emph{Migration Manager (MM)} (a dedicated thread that controls the migration) of each leader.
 Each group $G_i = \{s_1, \dots, s_m\}$ is a set of slots, and each slot $s_j$ contains the keys that map to it (e.g., by hashing), together with their values.
-The key-value pairs of a slot are stored in blocks of SAMM allocator that the slot owns (Section~\ref{sec:samm}).
+The key-value pairs of a slot are stored in blocks of SAMM allocator that the slot owns.
 Migrating $G_i$ means transferring the blocks of its slots belonging to $G_i$.
 Blocks are being moved as bulk, using one-sided RDMA, and never go through the log.
 During migration, only decisions related to migration that must survive a crash are appended to each shard group's replicated log.
@@ -45,7 +45,7 @@ A newly elected leader that is missing the data of $G_i$ can fetch the data from
 Fig.~\ref{fig:migration_flow} shows the migration of one group.
 
 The donor leader starts the migration by committing \texttt{START($G_i$)} to the replication log, making the migration intent durable~(step~\mstep{1}).
-It then scans the blocks of the slots of $G_i$ from its slot table (Section~\ref{sec:samm}) and registers them with its RNIC, unless they are already registered out of the migration path (e.g.\ at block allocation, or as part of one memory region that covers the whole address space of the key-value store).
+It then scans the blocks of the slots of $G_i$ from its slot table and registers them with its RNIC, unless they are already registered out of the migration path (e.g.\ at block allocation, or as part of one memory region that covers the whole address space of the key-value store).
 
 \emph{Leader-to-Leader} phase follows.The donor leader starts by sending \texttt{prepare} rpc to the recipient leader, which allocates the landing buffers for $G_i$ and registers them with the RNIC as Memory Regions(MR's).
 Because the allocation and the registration can take place out of the migration path, the recipient only replies with memory regions that are already registered.
@@ -138,8 +138,19 @@ On any reply other than \texttt{DURABLE}, it keeps sending \texttt{QUERY\_STATE(
 If the replicas holding the data crash after a \texttt{TRANSFERRED} reply, the recipient leader asks for the data again.
 The donor leader can always serve the data of $G_i$ since the index already has it until \texttt{DONE($G_i$)} commits.
 
-\input{pseudocodes/migration_donor_recovery.tex}
-\input{pseudocodes/migration_recipient_leader_recovery.tex}
+% The two recovery algorithms are set SIDE BY SIDE in one full-width float: declared as
+% separate single-column floats they were placed on different pages (donor on one, recipient
+% on the next), which splits a pair meant to be read together. [H] inside the minipages
+% pins each algorithm in place; the enclosing figure* carries no caption of its own, so the
+% figure counter is untouched and the algorithms keep their own numbers.
+\begin{figure*}[t]
+  \begin{minipage}[t]{0.48\textwidth}
+    \input{pseudocodes/migration_donor_recovery.tex}
+  \end{minipage}\hfill
+  \begin{minipage}[t]{0.48\textwidth}
+    \input{pseudocodes/migration_recipient_leader_recovery.tex}
+  \end{minipage}
+\end{figure*}
 
 \paragraph{Recipient recovery.}
 After winning an election, a recipient leader looks for groups whose log holds \texttt{TXN\_START($G_i$)} without \texttt{TRANSFER\_DURABLE($G_i$)}, and resumes each one (Algorithm~\ref{alg:recipient-leader-recovery}).
@@ -162,28 +173,6 @@ If no \texttt{DURABLE} follows the donor's \texttt{RDMA\_DONE($G_i$)}, it sends 
 It repeats the query whenever that \texttt{QUERY\_STATE($G_i$)} RPC goes unanswered, or whenever no \texttt{DURABLE} follows a \texttt{TRANSFERRED} reply or a new transfer.
 A newly elected recipient leader gives the replicas one heartbeat interval to report their flags, and counts a silent replica as lacking the data.
 
-% FLOAT PLACEMENT: Figure~\ref{fig:healthy} belongs to the evaluation and is
-% DECLARED HERE ONLY so it can reach the top of the page the evaluation opens on.
-% A full-width figure* is never placed on the page being typeset when LaTeX reads
-% it, so declared in evaluation.tex it could not land earlier than the page after.
-% Move it back into evaluation.tex if the text above it changes length.
-\begin{figure*}[t]
-  \centering
-  \begin{subfigure}[t]{4.56in}
-    \hspace*{1.020in}\begin{minipage}{3.46in}\centering
-      \caption{the phases of all three donor--recipient pairs}\label{fig:healthy-phases}
-    \end{minipage}
-    \par\centering\includegraphics{experiments/crash_recovery/figures/HEALTHY.pdf}
-  \end{subfigure}\hfill
-  \begin{subfigure}[t]{2.40in}
-    \hspace*{0.162in}\begin{minipage}{2.22in}\centering
-      \caption{what the clients see over the same run}\label{fig:healthy-ycsb}
-    \end{minipage}
-    \par\centering\vspace*{0.154in}\includegraphics{experiments/crash_recovery/figures/healthy_ycsb.pdf}
-  \end{subfigure}
-  \caption{No-fault migration.}
-  \label{fig:healthy}
-\end{figure*}
 
 \iffalse
 Fig.~\ref{fig:recipient_recovery} shows a recipient leader crash: B1 crashes after receiving $G_i$ but before replicating it, so the new leader B2 finds $G_i$ in flight without holding its data, obtains it again from the donor, and completes the migration.
@@ -200,6 +189,7 @@ Fig.~\ref{fig:recipient_recovery} shows a recipient leader crash: B1 crashes aft
   (g)~The donor commits \texttt{DONE($G_i$)}.}
   \label{fig:recipient_recovery}
 \end{figure}
+
 \fi
 
 \subsection{Chain replication}

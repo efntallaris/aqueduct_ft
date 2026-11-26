@@ -1,0 +1,33 @@
+Aqueduct at 95/5: no replication vs 3 replicas, per phase
+arms N95 and Q95 of the export, reads from the leader on both sides
+seconds are this tree's figure axis: the migration starts at 20
+
+phase    run                   mean      sd       min       max
+before   no replication       233.4     2.5     229.8     239.3
+during   no replication       261.6    45.2     229.4     367.7
+after    no replication       457.0    10.1     420.4     471.9
+before   3 replicas           233.8     3.7     225.5     238.3
+during   3 replicas           274.9    59.8     231.7     407.4
+after    3 replicas           428.0    11.0     398.2     444.9
+
+gap, no replication over 3 replicas (kops/s)
+  before      -0.4   -0.2%
+  during     -13.2   -4.8%
+  after      +29.1   +6.8%
+
+read latency, no replication over 3 replicas (ms)
+  before    +0.176   +5.7%
+  during    +0.300  +11.0%
+  after     -0.007   -0.4%
+
+the 'during' means are a TRANSIENT, not a level: each run dips and then climbs
+as groups land, and their standard deviations exceed the gap between the runs.
+Quote the before and after numbers, and the dip ratio for the migration itself.
+
+dip during the migration, against each run's OWN pre-migration mean
+  no replication   0.983x  (233.4 -> 229.4 kops/s)
+  3 replicas       0.991x  (233.8 -> 231.7 kops/s)
+
+scale-out gain, after / before
+  no replication   1.958x
+  3 replicas       1.830x
