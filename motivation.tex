@@ -1,0 +1,110 @@
+\section{Motivation}
+\label{sec:motivation}
+
+% SKELETON. The structure, the figure and the caption are in place; the prose of each
+% paragraph is still to be written. The bracketed notes say what each paragraph should
+% argue, and which measured numbers from Section~\ref{sec:evaluation} back it up.
+% The numbers quoted in the notes are the ones that section currently reports.
+
+\input{illustrations/topology.tex}
+\begin{figure*}[t]
+  \centering
+  \begin{subfigure}[b]{0.32\textwidth}
+    \centering\topopanel{2}
+    \caption{migration layered on replication}
+    \label{fig:topo-layered}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.32\textwidth}
+    \centering\topopanel{3}
+    \caption{\OurImplementation{}, the integrated chain}
+    \label{fig:topo-chain}
+  \end{subfigure}\hfill
+  \begin{subfigure}[b]{0.32\textwidth}
+    \centering\topoplot
+    \caption{what the split buys, by the model}
+    \label{fig:topo-model}
+  \end{subfigure}
+  \par\vspace{4pt}\topolegend
+  \caption{Two ways of landing a migrated group
+  \textit{G}\textsubscript{\textit{i}} in a recipient shard group of $n = 5$ replicas.
+  In both the donor leader A5 writes the blocks of
+  \textit{G}\textsubscript{\textit{i}} straight into the recipient leader B5 with a
+  one-sided RDMA write, and each leader drives its own \emph{replication path}, the
+  leader-to-follower log that carries the control actions of the migration.
+  What differs is how the data reaches the followers.
+  In (a) the recipient leader sends every chunk itself, once per follower, so the cost of
+  the transfer is paid again for each replica.
+  In (b) each replica forwards to its successor, so the group becomes durable once a
+  majority of $(n+1)/2 = 3$ replicas hold it, the shaded ones, and the remaining
+  $(n-1)/2 = 2$ are served asynchronously by the rest of the chain.
+  The time each one takes to make \textit{G}\textsubscript{\textit{i}} durable follows
+  from the drawing, with $B$ the size of the group, $R$ the rate of one link, and $k$ the
+  number of chunks the group is split into.
+  In (a) the replication of the group follows its transfer rather than overlapping it, so
+  splitting the group buys nothing and the majority costs $\frac{n+1}{2}B/R$ whatever
+  $k$ is.
+  In (b) every link carries $B$ once and the $(n+1)/2$ hops pipeline, so the majority
+  costs $\bigl(1 + \frac{n-1}{2k}\bigr)B/R$ and falls towards $B/R$ as the group is split
+  more finely.
+  Panel (c) plots the two against $k$ at $n = 5$.
+  They meet at $k = 1$, where the chain is as deep as the group is long and buys nothing,
+  and the chain falls away as the group is split.
+  The floor at $\frac{n-1}{2}B/R$ is the best a layered way could do even if it did
+  overlap the two,
+  because the recipient leader's own uplink still carries $B$ once per follower, and it
+  remains above the $B/R$ the chain approaches.
+  Panel (c) is the model rather than measured data.}
+  \label{fig:topology}
+\end{figure*}
+
+\paragraph{Production deployments are replicated.}
+% [Notes: every shard is a shard group of 2f+1 replicas with one leader, kept consistent by
+%  a leader-based protocol (Raft), for durability and availability. Cite raft, paxos-simple,
+%  slicer, shard-manager. State the consequence that frames the rest of the section: a
+%  migration does not move data between two nodes but between two shard groups, so every
+%  record that moves must also reach the followers of the recipient group before the
+%  recipient can own it. Point the reader at Fig.~\ref{fig:topology}.]
+\textcolor{red}{TBD}
+
+\paragraph{A migration crosses two paths, not one.}
+% [Notes: read off Fig.~\ref{fig:topology}. The replication path carries the control
+%  actions of the migration and is a leader-to-follower fan-out with a majority
+%  requirement. The chain-replication path carries the bulk data and is a pipeline whose
+%  depth grows with the size of the group. The two have different shapes and different
+%  costs, which is why a design that pushes the bulk data through the log, or that treats
+%  the two as independent mechanisms, pays for it. Note what the figure shows about group
+%  width: at five replicas the majority is reached after two chain hops rather than one.]
+\textcolor{red}{TBD}
+
+\paragraph{Layering migration on replication is expensive.}
+% [Notes: this is the quantitative hook. Rocksteady~\cite{rocksteady} pulls records on
+%  demand and defers re-replication until after the migration: on YCSB-B it falls from
+%  452.0 to 124.8Kops/s, a loss of 72%, and spends 88s below its pre-migration level, with
+%  the median read going from 22 to 45us and the 99.9th percentile from 64 to 255us. On
+%  YCSB-A it falls from 232.0 to 144.0Kops/s, 38%, for 38s. Contrast with \OurImplementation{}
+%  + FT, which gives up 0.9% over the seven seconds of the migration on YCSB-B and shows no
+%  measurable loss on YCSB-A. Forward-reference Section~\ref{sec:eval-sota}.]
+\textcolor{red}{TBD}
+
+\paragraph{Integration makes replication cheap.}
+% [Notes: the positive half of the argument. Because the replication of one group overlaps
+%  the transfer of the next instead of following it, the four groups contribute 2.22s of
+%  chain replication without extending the migration at all: the logged migration is
+%  7.02--7.32s in every run, replicated or not. The price is paid in steady state instead,
+%  6.4% of throughput on YCSB-B and 9.3% on YCSB-A, and in the update latency, which rises
+%  from 5.49 to 9.72ms on YCSB-B, because an update is acknowledged only once a majority
+%  holds it. Reads are unaffected, being served by the leader alone. Widening the group to
+%  the five replicas of Fig.~\ref{fig:topology} adds one synchronous hop and costs 0.77s
+%  over four groups, 2.22s against 2.99s. Forward-reference Section~\ref{sec:eval-replicas}.]
+\textcolor{red}{TBD}
+
+\paragraph{A migration in flight must survive a crash.}
+% [Notes: the second gap, the fault-tolerance one. A migration spans two shard groups and
+%  takes seconds, so it overlaps the failures the groups are already provisioned to
+%  survive, yet prior work leaves the migration itself outside the guarantees of the
+%  replication protocol: a crash of a donor or recipient leader abandons the transfer. State
+%  what the section's argument demands of a design, which is what Section~\ref{sec:protocol}
+%  then builds: control actions on the replicated log, bulk data off it, and recovery that
+%  rolls a migration forward rather than restarting it. Measured cost: recovery in under
+%  3.4s and completion less than 3s slower than a failure-free migration.]
+\textcolor{red}{TBD}
