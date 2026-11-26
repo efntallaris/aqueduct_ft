@@ -1,8 +1,23 @@
 \section{Introduction}
 \label{sec:introduction}
 
+Elastically scaling distributed key-value stores (redistributing key-value shards in an online manner) is an important way to gracefully absorb load variations in modern data centers, and rapid data migration is a key enabler of elasticity.
+
+While several distributed key-value stores (KVSs) have targeted rapid data migration, none so far have investigated the efficent integration of data migration and replication mechanisms, nor have they studied fault-tolerance aspects of the data migration process (i.e., its robustness under failures).
+%in non-replicated systems, migration performance is impacted when considering replicated setups, 
+%leading to reduced migration throughput and higher duration. 
+%Existing solutions consider migration and replication two different actions. In our case we integrate migration into replication
+
+In this paper we present \OurImplementation{}, 
+a distributed KVS that integrates the data migration and replication protocols, using a variant of chain-replication for efficient pipelined bulk RDMA transfers, while migration control actions follow the standard replication protocol.
+\OurImplementation{} schedules data-migration in the manner of a transaction and is thus recoverable and robust to crash failures.
+
+Our experiments demonstrate that \OurImplementation{} can migrate shards between replica groups only 10\% 
+slower than its non-replicated version; in contrast, competing systems (e.g., RAMCloud variants such as Rocksteady) are significantly impacted when migrating data in replicated settings.
+Under crash failures, \OurImplementation{} can recover a migration transaction in less than 3.4 seconds and complete it less than 3 seconds slower than failure-free migration.
+
 %
-Our contributions are :
+In summary, our contributions in this paper are :
 \begin{itemize}
 \item We implemented a migration protocol which is integrated with a linearizable replication protocol (such as Raft).
 \item RDMA transfers between replicas within shard take place through a chain-replication variant 
@@ -14,5 +29,4 @@ slower than non-replicated Aqueduct, whereas RAMCloud variants such as Rockstead
 with a less than \% percent slowdown compared to failure-free migration.
 \end{itemize}
 
-
-Existing solutions consider migration and replication two different actions. In our case we integrate migration into replication
+The remainder of this paper proceeds as follows:  In Section ...

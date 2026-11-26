@@ -47,38 +47,38 @@
 
 \title{Integrating Data Migration with Replication in Distributed Key-Value Stores}
 
-\author{
-\IEEEauthorblockN{Author 1}
-\IEEEauthorblockA{Institution 1\\
-City, Country\\
-author1@institution1.org}
-\and
-\IEEEauthorblockN{Author 2}
-\IEEEauthorblockA{Institution 2\\
-City, Country\\
-author2@institution2.org}
-\and
-\IEEEauthorblockN{Author 3}
-\IEEEauthorblockA{Institution 3\\
-City, Country\\
-author3@institution3.org}
-}
+\author{\IEEEauthorblockN{Author list omitted for double-blind reviewing}}
+
+%\author{
+%\IEEEauthorblockN{Author 1}
+%\IEEEauthorblockA{Institution 1\\
+%City, Country\\
+%author1@institution1.org}
+%\and
+%\IEEEauthorblockN{Author 2}
+%\IEEEauthorblockA{Institution 2\\
+%City, Country\\
+%author2@institution2.org}
+%\and
+%\IEEEauthorblockN{Author 3}
+%\IEEEauthorblockA{Institution 3\\
+%City, Country\\
+%author3@institution3.org}
+%}
 
 \maketitle
 
 \begin{abstract}
-Rapid data migration in distributed key-value stores is an important mechanism to be able to absorb load variations in modern data centers.
-While several systems have addressed this goal, none of them have investigated the performance impact of combining data migration and replication 
-nor fault-tolerance aspects in data migration protocols, namely recovery under failures.
+Elastically scaling distributed key-value stores (redistributing key-value shards in an online manner) is an important way to gracefully absorb load variations in modern data centers, and rapid data migration is a key enabler of elasticity.
+While several distributed key-value stores (KVSs) have targeted rapid data migration, none so far have investigated the efficent integration of data migration and replication mechanisms, nor have they studied fault-tolerance aspects of the data migration process (i.e., its robustness under failures).
 %in non-replicated systems, migration performance is impacted when considering replicated setups, 
 %leading to reduced migration throughput and higher duration. 
 In this paper we present \OurImplementation{}, 
-a system that integrates migration into the replication protocol, using a variant of chain-replication for bulk RDMA transfers.
-\OurImplementation{} schedules data-migration as a transaction that is recoverable and robust to crash failures.
-Experiments demonstrate that \OurImplementation{} can migrate shards between replica groups only 10\% 
-slower than non-replicated Aqueduct, whereas RAMCloud variants such as Rocksteady are signifantly impacted in replicated settings.
-Under crash failures, \OurImplementation{} can recover a migration transaction in less than 3.4 seconds and 
-complete it less than 3 seconds slower than failure-free migration.
+a distributed KVS that integrates the data migration and replication protocols, using a variant of chain-replication for efficient pipelined bulk RDMA transfers, while migration control actions follow the standard replication protocol.
+\OurImplementation{} schedules data migrations as transactions, namely as an atomic actions that are also robust to crash failures.
+Our experiments demonstrate that \OurImplementation{} can migrate shards between replica groups only 10\% 
+slower than its non-replicated version; in contrast, competing systems (e.g., RAMCloud variants such as Rocksteady) are significantly impacted when migrating data in replicated settings.
+Under crash failures, \OurImplementation{} can recover a migration transaction in less than 3.4 seconds and complete it less than 3 seconds slower than failure-free migration.
 \end{abstract}
 
 \input{introduction.tex}
