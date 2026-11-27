@@ -21,7 +21,6 @@
   \label{tab:scenarios}
 \end{table}
 
-
 We evaluate \OurImplementation{} migration protocol, by triggering elasticity of a running Redis cluster while YCSB~\cite{ycsb} client workload is running at the same time.
 We try to answer the following research questions.
 \begin{itemize}
@@ -51,23 +50,6 @@ Table~\ref{tab:scenarios} lists the six scenarios.
 \label{sec:eval-healthy}
 
 % it, so declared in evaluation.tex it could not land earlier than the page after.
-\begin{figure*}[t]
-  \centering
-  \begin{subfigure}[t]{4.56in}
-    \hspace*{1.020in}\begin{minipage}{3.46in}\centering
-      \caption{the phases of all three donor--recipient pairs}\label{fig:healthy-phases}
-    \end{minipage}
-    \par\centering\includegraphics{experiments/crash_recovery/figures/HEALTHY.pdf}
-  \end{subfigure}\hfill
-  \begin{subfigure}[t]{2.40in}
-    \hspace*{0.162in}\begin{minipage}{2.22in}\centering
-      \caption{what the clients see over the same run}\label{fig:healthy-ycsb}
-    \end{minipage}
-    \par\centering\vspace*{0.154in}\includegraphics{experiments/crash_recovery/figures/healthy_ycsb.pdf}
-  \end{subfigure}
-  \caption{No-fault migration.}
-  \label{fig:healthy}
-\end{figure*}
 
 Figure~\ref{fig:healthy} shows a migration with no fault.
 Figure~\ref{fig:healthy}a presents the breakdown of the migration duration.
@@ -90,25 +72,6 @@ Throughput and latency do not have any impact throughout the migration.
 
 \subsection{Comparison against the state of the art}
 \label{sec:eval-sota}
-
-\begin{figure*}[t]
-  \centering
-  \includegraphics{experiments/baselines/figures/baselines_legend.pdf}\\[1pt]
-  \begin{subfigure}[t]{0.49\textwidth}
-    \centering
-    \includegraphics{experiments/baselines/figures/baselines.pdf}
-    \caption{YCSB-B (95\% reads/5\% writes)}
-    \label{fig:baselines}
-  \end{subfigure}\hfill
-  \begin{subfigure}[t]{0.49\textwidth}
-    \centering
-    \includegraphics{experiments/baselines/figures/baselines_5050.pdf}
-    \caption{YCSB-A (50\% reads/50\% writes)}
-    \label{fig:baselines5050}
-  \end{subfigure}
-  \caption{SOTA YCSB performance.}
-  \label{fig:baselines-both}
-\end{figure*}
 
 {\color{red}
 In Figure~\ref{fig:baselines-both} we see \OurImplementation{}, \OurImplementation{} + FT
@@ -160,33 +123,9 @@ Fault tolerance therefore costs steady-state throughput rather than migration ti
 Section~\ref{sec:eval-replicas} examines how a wider recipient group lengthens the
 migration.
 
-
-\paragraph{Against Rocksteady.}
-The difference between the two systems is the depth and the length of the degraded
-window.
-On YCSB-B \OurImplementation{} with fault tolerance gives up 0.9\% of its throughput over
-the seven seconds of the migration, while Rocksteady falls from 452.0 to 124.8Kops/s, 72\%
-of its throughput, and spends 88s below its pre-migration level.
-On YCSB-A the same comparison is no measurable loss for \OurImplementation{} + FT against
-a fall from 232.0 to 144.0Kops/s, or 38\%, with 38s spent below its pre-migration level.
-Rocksteady's degraded window is therefore measured in tens of seconds and
-\OurImplementation{}'s in single seconds.
-Rocksteady does recover to a higher plateau than it started from, 646.7 and 428.2Kops/s.
-The tail behaves the same way.
-Its median read goes from 22 to 45$\mu$s during the migration and its 99.9th percentile
-from 64 to 255$\mu$s.
-This follows from how each protocol moves data.
-Rocksteady pulls records on demand and defers re-replication until after the migration,
-so it reaches its destination quickly and pays for it with a long stretch in which the
-client sees a partly migrated store.
-\OurImplementation{} moves one group at a time and makes that group durable before it
-cuts over, which bounds what the client sees to the 6--7s the four groups take.
-}
-
-
-\subsection{Elasticity with fault injections}
-\label{sec:eval-scaleout}
-
+% Figures 6 and 7 are discussed in Section~\ref{sec:eval-scaleout} but DECLARED HERE, at the end of
+% the previous subsection: a figure* cannot land on the page being typeset when LaTeX reads
+% it, so declared at the head of their own subsection they fell a page behind their text.
 \begin{figure*}[t]
   \centering
   \includegraphics{experiments/crash_recovery/figures/grid6.pdf}
@@ -253,6 +192,30 @@ cuts over, which bounds what the client sees to the 6--7s the four groups take.
   \caption{Breakdown of faulting scenarios during migration.}
   \label{fig:crashes}
 \end{figure*}
+
+\paragraph{Against Rocksteady.}
+The difference between the two systems is the depth and the length of the degraded
+window.
+On YCSB-B \OurImplementation{} with fault tolerance gives up 0.9\% of its throughput over
+the seven seconds of the migration, while Rocksteady falls from 452.0 to 124.8Kops/s, 72\%
+of its throughput, and spends 88s below its pre-migration level.
+On YCSB-A the same comparison is no measurable loss for \OurImplementation{} + FT against
+a fall from 232.0 to 144.0Kops/s, or 38\%, with 38s spent below its pre-migration level.
+Rocksteady's degraded window is therefore measured in tens of seconds and
+\OurImplementation{}'s in single seconds.
+Rocksteady does recover to a higher plateau than it started from, 646.7 and 428.2Kops/s.
+The tail behaves the same way.
+Its median read goes from 22 to 45$\mu$s during the migration and its 99.9th percentile
+from 64 to 255$\mu$s.
+This follows from how each protocol moves data.
+Rocksteady hands ownership to the target at the start and pulls records on demand, so
+clients see a partly migrated store for the whole migration.
+\OurImplementation{} moves one group at a time and makes that group durable before it
+cuts over, which bounds what the client sees to the 6--7s the four groups take.
+}
+
+\subsection{Elasticity with fault injections}
+\label{sec:eval-scaleout}
 
 Figure~\ref{fig:grid6} shows the throughput and latency of the YCSB clients.
 The dashed lines are the time that the crash was injected.
@@ -334,6 +297,5 @@ With three replicas the group is durable once two replicas hold it, the leader a
 With five replicas it is durable once three replicas hold it, the leader, F1 and F2, which is two hops and takes 1.07s to 1.26s per group.
 Over the four groups this is 2.22s against 2.99s, a penalty of 0.77s.
 The extra cost is the time of the extra hop and no extra work for the group, with the benefit of one more tolerated failure.
-
 
 \FloatBarrier

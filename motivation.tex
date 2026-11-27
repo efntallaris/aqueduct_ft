@@ -25,86 +25,91 @@
     \label{fig:topo-model}
   \end{subfigure}
   \par\vspace{4pt}\topolegend
-  \caption{Two ways of landing a migrated group
-  \textit{G}\textsubscript{\textit{i}} in a recipient shard group of $n = 5$ replicas.
-  In both the donor leader A5 writes the blocks of
-  \textit{G}\textsubscript{\textit{i}} straight into the recipient leader B5 with a
-  one-sided RDMA write, and each leader drives its own \emph{replication path}, the
-  leader-to-follower log that carries the control actions of the migration.
-  What differs is how the data reaches the followers.
-  In (a) the recipient leader sends every chunk itself, once per follower, so the cost of
-  the transfer is paid again for each replica.
-  In (b) each replica forwards to its successor, so the group becomes durable once a
-  majority of $(n+1)/2 = 3$ replicas hold it, the shaded ones, and the remaining
-  $(n-1)/2 = 2$ are served asynchronously by the rest of the chain.
-  The time each one takes to make \textit{G}\textsubscript{\textit{i}} durable follows
-  from the drawing, with $B$ the size of the group, $R$ the rate of one link, and $k$ the
-  number of chunks the group is split into.
-  In (a) the replication of the group follows its transfer rather than overlapping it, so
-  splitting the group buys nothing and the majority costs $\frac{n+1}{2}B/R$ whatever
-  $k$ is.
-  In (b) every link carries $B$ once and the $(n+1)/2$ hops pipeline, so the majority
-  costs $\bigl(1 + \frac{n-1}{2k}\bigr)B/R$ and falls towards $B/R$ as the group is split
-  more finely.
-  Panel (c) plots the two against $k$ at $n = 5$.
-  They meet at $k = 1$, where the chain is as deep as the group is long and buys nothing,
-  and the chain falls away as the group is split.
-  The floor at $\frac{n-1}{2}B/R$ is the best a layered way could do even if it did
-  overlap the two,
-  because the recipient leader's own uplink still carries $B$ once per follower, and it
-  remains above the $B/R$ the chain approaches.
-  Panel (c) is the model rather than measured data.}
+  \caption{Landing a migrated group $G_i$ in a recipient shard group of $n = 5$.
+  (a)~The recipient leader sends $G_i$ to each follower itself.
+  (b)~Each replica forwards to its successor; $G_i$ is durable once the shaded majority holds it.
+  (c)~Time to reach that majority against the number of chunks $k$ (model).}
   \label{fig:topology}
 \end{figure*}
 
-\paragraph{Production deployments are replicated.}
-% [Notes: every shard is a shard group of 2f+1 replicas with one leader, kept consistent by
-%  a leader-based protocol (Raft), for durability and availability. Cite raft, paxos-simple,
-%  slicer, shard-manager. State the consequence that frames the rest of the section: a
-%  migration does not move data between two nodes but between two shard groups, so every
-%  record that moves must also reach the followers of the recipient group before the
-%  recipient can own it. Point the reader at Fig.~\ref{fig:topology}.]
-\textcolor{red}{TBD}
-
-\paragraph{A migration crosses two paths, not one.}
-% [Notes: read off Fig.~\ref{fig:topology}. The replication path carries the control
-%  actions of the migration and is a leader-to-follower fan-out with a majority
-%  requirement. The chain-replication path carries the bulk data and is a pipeline whose
-%  depth grows with the size of the group. The two have different shapes and different
-%  costs, which is why a design that pushes the bulk data through the log, or that treats
-%  the two as independent mechanisms, pays for it. Note what the figure shows about group
-%  width: at five replicas the majority is reached after two chain hops rather than one.]
-\textcolor{red}{TBD}
-
-\paragraph{Layering migration on replication is expensive.}
-% [Notes: this is the quantitative hook. Rocksteady~\cite{rocksteady} pulls records on
-%  demand and defers re-replication until after the migration: on YCSB-B it falls from
-%  452.0 to 124.8Kops/s, a loss of 72%, and spends 88s below its pre-migration level, with
-%  the median read going from 22 to 45us and the 99.9th percentile from 64 to 255us. On
-%  YCSB-A it falls from 232.0 to 144.0Kops/s, 38%, for 38s. Contrast with \OurImplementation{}
-%  + FT, which gives up 0.9% over the seven seconds of the migration on YCSB-B and shows no
-%  measurable loss on YCSB-A. Forward-reference Section~\ref{sec:eval-sota}.]
-\textcolor{red}{TBD}
-
-\paragraph{Integration makes replication cheap.}
-% [Notes: the positive half of the argument. Because the replication of one group overlaps
-%  the transfer of the next instead of following it, the four groups contribute 2.22s of
-%  chain replication without extending the migration at all: the logged migration is
-%  7.02--7.32s in every run, replicated or not. The price is paid in steady state instead,
-%  6.4% of throughput on YCSB-B and 9.3% on YCSB-A, and in the update latency, which rises
-%  from 5.49 to 9.72ms on YCSB-B, because an update is acknowledged only once a majority
-%  holds it. Reads are unaffected, being served by the leader alone. Widening the group to
-%  the five replicas of Fig.~\ref{fig:topology} adds one synchronous hop and costs 0.77s
-%  over four groups, 2.22s against 2.99s. Forward-reference Section~\ref{sec:eval-replicas}.]
-\textcolor{red}{TBD}
+Elastic scaling moves data between replicated groups of servers while they keep serving
+clients.
+We consider key-value stores that partition their key space into \emph{slots} and keep
+each partition on a \emph{shard group}: $n$ replicas, one \emph{leader} and its followers, kept
+consistent by a leader-based replication protocol (Section~\ref{sec:fault-model}).
+A migration moves a set of slots from a \emph{donor} shard group to a \emph{recipient} shard
+group, and moves them in \emph{migration groups}: each group $G_i$ is a set of slots that is
+transferred and committed as one unit (Section~\ref{sec:migration-protocol}).
+The paragraphs below examine the two properties such a migration needs, failure atomicity
+and efficiency, using the two designs of Fig.~\ref{fig:topology}.
 
 \paragraph{A migration in flight must survive a crash.}
-% [Notes: the second gap, the fault-tolerance one. A migration spans two shard groups and
-%  takes seconds, so it overlaps the failures the groups are already provisioned to
-%  survive, yet prior work leaves the migration itself outside the guarantees of the
-%  replication protocol: a crash of a donor or recipient leader abandons the transfer. State
-%  what the section's argument demands of a design, which is what Section~\ref{sec:protocol}
-%  then builds: control actions on the replicated log, bulk data off it, and recovery that
-%  rolls a migration forward rather than restarting it. Measured cost: recovery in under
-%  3.4s and completion less than 3s slower than a failure-free migration.]
-\textcolor{red}{TBD}
+A migration spans two shard groups, $2n$ replicas, and is typically started when a shard is
+already overloaded~\cite{rocksteady}, so crashes during a migration are to be expected.
+If the migration does not handle them, a crash can leave the cluster inconsistent: a slot may
+end up owned by both shard groups or by neither, or its data may reach the recipient while its
+ownership stays with the donor, so that clients read from a replica that lacks the data or lose
+writes.
+Rocksteady~\cite{rocksteady} avoids this by undoing the migration, which discards the data already moved and
+starts over.
+A migration recorded in the replicated log can instead roll forward: a new leader reads from
+the log which groups have started, become durable or completed, and resumes from the group in
+flight.
+
+\paragraph{A migration crosses two paths, not one.}
+Each shard group already has a \emph{replication path}: the leader appends every write to a
+replicated log, an entry commits once a majority of the shard group stores it, and a committed
+entry survives the crash of any minority of the replicas, the leader included.
+In most systems, however, migration does not consider replication: it moves the data along a
+separate \emph{data path}, outside the replicated log, and where it does survive failures, it does so through the migration
+mechanism alone; in other cases, failures are not considered at all.
+Rocksteady~\cite{rocksteady}, for example, hands ownership to the recipient at the start and
+defers re-replicating the migrated records; if either side crashes it returns ownership to the
+source and recovers the source from both servers' logs, at twice the cost of a normal recovery,
+so the migration is undone and must start over.
+\OurImplementation{} puts the migration on both paths (Fig.~\ref{fig:topology}).
+Its control actions, when a group starts, when it is durable at the recipient and when it is
+done, are entries on the replication path (Table~\ref{tab:log-entries}), so each group moves as
+a transaction that a new leader resumes from the log, rolling the migration forward, while the data itself stays off the log
+and moves along the data path.
+
+\paragraph{Moving data efficiently.}
+Consider the two topologies of Fig.~\ref{fig:topology} moving one group $G_i$ of $B$ bytes into a
+recipient shard group of $n$ replicas, over links that each carry $R$ bytes per second, so
+that one link moves the whole group in $B/R$.
+We consider a group durable once a majority, $\nmaj = (n+1)/2$ replicas, holds it: the leader
+and $\nmaj - 1$ followers.
+In both topologies the donor leader first writes the group into the recipient leader, which
+takes $B/R$.
+In the layered topology (Fig.~\ref{fig:topo-layered}) the recipient leader then sends the
+group to its followers itself, one copy per follower over a single link, and $\nmaj - 1$ copies must arrive for the data to be durable:
+\begin{equation}
+  T_{\mathrm{layered}} = \frac{B}{R} + (\nmaj - 1)\,\frac{B}{R}.
+  \label{eq:layered}
+\end{equation}
+In the chain (Fig.~\ref{fig:topo-chain}) every replica uploads the group only once, to its
+successor.
+But if a replica waits for one whole group before forwarding it, the $\nmaj - 1$ hops after
+the leader run one after another, and the chain reaches the majority at the same
+$\nmaj B/R$.
+At $n=5$ both take $3B/R$.
+With $k=1$ the chain has moved the work from the leader's uplink onto the followers'
+uplinks, but only one link is busy at any moment, so it is no faster.
+
+\paragraph{Splitting the group lets every link work at once.}
+If the group is split into $k$ chunks of $B/k$ bytes, each replica forwards a chunk to its
+successor as soon as it has received it, and receives the next chunk while it forwards the
+previous one.
+Once the first chunk has crossed the $\nmaj - 1$ hops to the majority, all of those links carry
+different chunks at the same time, and the majority is reached at
+\begin{equation}
+  T_{\mathrm{chain}}(k) = \frac{B}{R} + (\nmaj - 1)\,\frac{B}{kR},
+  \label{eq:chain}
+\end{equation}
+which equals Eq.~\eqref{eq:layered} at $k=1$ and falls as $k$ grows.
+The layered topology gains far less from splitting.
+Even if its recipient leader forwards each chunk as soon as it arrives, it still sends the
+whole group once to each of the $\nmaj - 1$ followers over the same link.
+The group therefore cannot become durable in less than $(\nmaj - 1)B/R$, which is $2B/R$ at
+$n = 5$, however finely it is split.
+

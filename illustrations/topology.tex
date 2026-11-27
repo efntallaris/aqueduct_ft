@@ -7,23 +7,27 @@
 % and shared by the legend, so the three panels and the key carry one type size.
 \definecolor{ink}{RGB}{34,34,34}
 \definecolor{irfill}{gray}{0.86}
+% The majority that makes a group durable gets its own, lighter grey: sharing irfill with
+% the data chunks made the shading read as data, and at 0.86 it competed with the white
+% replica boxes it is meant to group.
+\definecolor{majfill}{gray}{0.93}
 \newcommand{\topozoom}{0.927}
 \tikzset{topostyle/.style={%
-    font=\fontsize{7.5}{9}\fontfamily{phv}\selectfont,
+    font=\fontsize{7.5}{9}\fontfamily{ptm}\selectfont,
     >={Stealth[length=4pt,width=3.2pt]},
     shard/.style={draw=ink,line width=0.6pt,fill=white,rounded corners=1.5pt,
                   minimum width=26pt,minimum height=14pt,inner sep=0pt},
-    leader/.style={shard,fill=ink,text=white,font=\fontsize{7.5}{9}\fontfamily{phv}\bfseries},
+    leader/.style={shard,fill=ink,text=white,font=\fontsize{7.5}{9}\fontfamily{ptm}\bfseries},
     bulk/.style={->,draw=ink,line width=1.8pt,>={Stealth[length=5pt,width=5pt]}},
     abulk/.style={bulk,dash pattern=on 3pt off 2pt},
     notify/.style={->,draw=ink,line width=0.6pt,dash pattern=on 2.2pt off 1.4pt,
                    rounded corners=2pt},
     lbl/.style={inner sep=1pt,text=ink},
     phase/.style={rounded corners=2pt},
-    rolelbl/.style={lbl,font=\fontsize{7}{8}\fontfamily{phv}\itshape},
+    rolelbl/.style={lbl,font=\fontsize{7}{8}\fontfamily{ptm}\itshape},
     chunk/.style={draw=ink,line width=0.6pt,fill=irfill,minimum width=18pt,
                   minimum height=10pt,inner sep=0pt,
-                  font=\fontsize{6.6}{7.4}\fontfamily{phv}\selectfont},
+                  font=\fontsize{6.6}{7.4}\fontfamily{ptm}\selectfont},
 }}
 
 \newcommand{\topopanel}[1]{%
@@ -35,10 +39,16 @@
   \def\rowa{22} \def\rowb{48} \def\rowc{74} \def\rowd{100} \def\rowe{126}
 
   % one bounding box for all three panels, so that they scale alike
-  \useasboundingbox (0,12) rectangle (178,166);
+  \useasboundingbox (0,0) rectangle (178,148);
+
+  % --- which shard group each column is, in the style of illustrations/1.tex ---
+  \node[font=\fontsize{7.5}{9}\fontfamily{ptm}\bfseries,anchor=base] at (\Dx,6) {Donor shard group};
+  \node[font=\fontsize{7.5}{9}\fontfamily{ptm}\bfseries,anchor=base] at (\Rx,6) {Recipient shard group};
+  \draw[ink,line width=0.5pt] (\Dx-16,13) -- ++(0,-2) -- (\Dx+16,11) -- ++(0,2);
+  \draw[ink,line width=0.5pt] (\Rx-16,13) -- ++(0,-2) -- (\Rx+16,11) -- ++(0,2);
 
   % --- the replicas that make the group durable -----------------------------
-  \ifnum#1>1 \fill[phase,irfill] (118,67) rectangle (154,133); \fi
+  \ifnum#1>1 \fill[phase,majfill] (118,67) rectangle (154,133); \fi
 
   % --- donor replicas --------------------------------------------------------
   \node[shard]  at (\Dx,\rowa) {A1};
@@ -69,8 +79,8 @@
   \ifnum#1=2
     \node[chunk,minimum width=41pt] at (88,118) {\textit{B}};
   \else
-    \node[chunk] at (76.5,118) {\textit{B}/2};
-    \node[chunk] at (99.5,118) {\textit{B}/2};
+    \node[chunk] at (76.5,118) {\textit{B}/\textit{k}};
+    \node[chunk] at (99.5,118) {\textit{B}/\textit{k}};
   \fi
   % the brace counts the chunks the group is split into
   \draw[ink,line width=0.5pt,decorate,decoration={brace,amplitude=3pt}]
@@ -81,29 +91,20 @@
     \node[lbl,anchor=base] at (88,104) {$k = 2$};
   \fi
   \node[lbl,inner sep=1.5pt,
-        font=\fontsize{7.5}{9}\fontfamily{phv}\bfseries] at (90,137) {R};
+        font=\fontsize{7.5}{9}\fontfamily{ptm}\bfseries] at (90,137) {R};
 
   % --- how the data reaches the followers ------------------------------------
   \ifnum#1=2
     % the leader sends every chunk itself, once per follower
     \foreach \y in {\rowa,\rowb,\rowc,\rowd}
       \draw[bulk,rounded corners=2pt] (\Rx-13,122) -- (114,122) -- (114,\y) -- (\Rx-13,\y);
-    \node[lbl,anchor=east,font=\fontsize{7.5}{9}\fontfamily{phv}\bfseries] at (110,61) {R};
+    \node[lbl,anchor=east,font=\fontsize{7.5}{9}\fontfamily{ptm}\bfseries] at (110,61) {R};
   \fi
-  % --- what the transfer costs ----------------------------------------------
-  \ifnum#1=2
-    \node[lbl,anchor=base] at (89,162)
-      {$n = 5$:\quad $T_{a} = \tfrac{n+1}{2}\,B/R = 3\,B/R$};
-  \else
-    \node[lbl,anchor=base] at (89,162)
-      {$n = 5$:\quad $T_{b} = \bigl(1 + \tfrac{n-1}{2k}\bigr)B/R = 2\,B/R$};
-  \fi
-
   \ifnum#1=3
     % the chain runs up from the leader, the first two hops reach a majority
     \draw[bulk]  (\Rx,118.5) -- (\Rx,107.5);
     \draw[bulk]  (\Rx,92.5)  -- (\Rx,81.5);
-    \node[lbl,anchor=east,font=\fontsize{7.5}{9}\fontfamily{phv}\bfseries] at (120,87) {R};
+    \node[lbl,anchor=east,font=\fontsize{7.5}{9}\fontfamily{ptm}\bfseries] at (120,87) {R};
     \draw[abulk] (\Rx,66.5)  -- (\Rx,55.5);
     \draw[abulk] (\Rx,40.5)  -- (\Rx,29.5);
   \fi
@@ -114,18 +115,17 @@
 \newcommand{\topoblank}{%
 \scalebox{\topozoom}{%
 \begin{tikzpicture}[x=1pt,y=-1pt,topostyle]
-  \useasboundingbox (0,12) rectangle (178,166);
+  \useasboundingbox (0,0) rectangle (178,148);
 \end{tikzpicture}}%
 }
 
 % The model the two panels above describe, drawn: the time to get one group onto a
 % majority of the recipient group, against the number of chunks k, for both ways.
-% The formula, not measured data.
+% The formula, not measured data. The k axis is logarithmic, 1 to 32.
 %   (a) layered, replication follows the transfer, so splitting does not help:
 %       (n+1)/2 B/R, and even a pipelined layered way could not pass (n-1)/2 B/R,
 %   (b) chain, every link carries B once over (n+1)/2 pipelined hops:
-%       (1 + (n-1)/2k) B/R,
-%       so it falls towards B/R.
+%       (1 + (n-1)/2k) B/R, which falls towards B/R,
 % The y axis title is turned with \rotatebox rather than with a node rotation, because
 % y runs downwards here and a node rotation would come out mirrored.
 \newcommand{\topoplot}{%
@@ -133,34 +133,25 @@
 \begin{tikzpicture}[x=1pt,y=-1pt,topostyle,
     axis/.style={draw=ink,line width=0.7pt},
     ticklbl/.style={inner sep=1.5pt,text=ink,
-                    font=\fontsize{6.6}{7.4}\fontfamily{phv}\selectfont},
+                    font=\fontsize{8.5}{10}\fontfamily{ptm}\selectfont},
     layered/.style={draw=ink,line width=1.6pt,dash pattern=on 4pt off 2.5pt},
     chain/.style={draw=ink,line width=1.6pt,line join=round},
     grid/.style={draw=ink!45,line width=0.5pt,dash pattern=on 1.2pt off 1.6pt}]
-  \useasboundingbox (0,12) rectangle (178,166);
+  \useasboundingbox (0,15) rectangle (178,163);
 
   \node[ticklbl,inner sep=0pt] at (14,82.0)
     {\rotatebox{90}{migration transfer duration ($B/R$)}};
 
   % the floors each way is bound by, doubling as the gridlines
-  \draw[grid] (32.0,70.5) -- (172.0,70.5);
-  \node[ticklbl,anchor=north east] at (171.0,71.5) {$\tfrac{n-1}{2}B/R$};
-  \draw[grid] (32.0,103.3) -- (172.0,103.3);
   \node[ticklbl,anchor=north east] at (171.0,104.3) {$B/R$};
 
-  % axes
+  % axes; k is logarithmic, one doubling every 26.4pt
   \draw[axis] (32.0,136.0) -- (172.0,136.0);
   \draw[axis] (32.0,136.0) -- (32.0,28.0);
-  \draw[axis] (32.0,136.0) -- (32.0,139.0);
-  \node[ticklbl,anchor=north] at (32.0,140.0) {1};
-  \draw[axis] (50.9,136.0) -- (50.9,139.0);
-  \node[ticklbl,anchor=north] at (50.9,140.0) {2};
-  \draw[axis] (88.6,136.0) -- (88.6,139.0);
-  \node[ticklbl,anchor=north] at (88.6,140.0) {4};
-  \draw[axis] (126.3,136.0) -- (126.3,139.0);
-  \node[ticklbl,anchor=north] at (126.3,140.0) {6};
-  \draw[axis] (164.0,136.0) -- (164.0,139.0);
-  \node[ticklbl,anchor=north] at (164.0,140.0) {8};
+  \foreach \k/\x in {1/32.0,2/58.4,4/84.8,8/111.2,16/137.6,32/164.0} {
+    \draw[axis] (\x,136.0) -- (\x,139.0);
+    \node[ticklbl,anchor=north] at (\x,140.0) {\k};
+  }
   \draw[axis] (32.0,103.3) -- (29.0,103.3);
   \node[ticklbl,anchor=east] at (27.0,103.3) {1};
   \draw[axis] (32.0,70.5) -- (29.0,70.5);
@@ -169,23 +160,21 @@
   \node[ticklbl,anchor=east] at (27.0,37.8) {3};
   \node[ticklbl,anchor=north] at (98.0,152.0) {chunks $k$};
 
-  \node[ticklbl,anchor=north west] at (38,112) {$n = 5$};
+  \node[ticklbl,anchor=south west] at (36,31) {$n = 5$};
 
-  % (a) layered: k does not help, (1+f) B/R
+  % (a) layered: k does not help
   \draw[layered] (32.0,37.8) -- (164.0,37.8);
   \node[ticklbl,anchor=south east] at (164.0,36.3) {(a) layered};
 
-  % (b) chain: (1 + f/k) B/R
-  \draw[chain] (32.0,37.8) -- (50.9,70.5) -- (69.7,81.5) -- (88.6,86.9) -- (107.4,90.2) -- (126.3,92.4) -- (145.1,93.9) -- (164.0,95.1);
-  \fill[ink] (32.0,37.8) circle (1.4pt);
-  \fill[ink] (50.9,70.5) circle (1.4pt);
-  \fill[ink] (69.7,81.5) circle (1.4pt);
-  \fill[ink] (88.6,86.9) circle (1.4pt);
-  \fill[ink] (107.4,90.2) circle (1.4pt);
-  \fill[ink] (126.3,92.4) circle (1.4pt);
-  \fill[ink] (145.1,93.9) circle (1.4pt);
-  \fill[ink] (164.0,95.1) circle (1.4pt);
-  \node[ticklbl,anchor=south] at (107.4,86.2) {(b) chain};
+
+  % (b) chain, splitting free: (1 + (n-1)/2k) B/R
+  \draw[chain] (32.0,37.8) -- (47.4,59.6) -- (58.4,70.5) -- (73.8,81.5) -- (84.8,86.9) -- (100.2,92.4) -- (111.2,95.1) -- (126.6,97.8) -- (137.6,99.2) -- (153.0,100.6) -- (164.0,101.3);
+  \foreach \p in {(32.0,37.8),(58.4,70.5),(84.8,86.9),(111.2,95.1),(137.6,99.2),(164.0,101.3)}
+    \fill[ink] \p circle (1.4pt);
+
+  % key for the two chain curves, in the empty band under them
+  \draw[chain]  (38,114) -- (52,114);
+  \node[ticklbl,anchor=west] at (54,114) {(b) chain};
 \end{tikzpicture}}%
 }
 

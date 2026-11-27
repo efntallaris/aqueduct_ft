@@ -1,6 +1,23 @@
 \section{Fault-tolerant migration protocol}
 \label{sec:protocol}
 
+\OurImplementation{} makes migration failure-atomic and efficient by integrating it with
+replication rather than running it beside it.
+For failure atomicity, it moves each group $G_i$ as a transaction whose progress is recorded by
+four entries in the replicated logs of the donor and the recipient shard groups
+(Table~\ref{tab:log-entries}), so a newly elected leader can tell from its own log how far each
+group got and roll it forward.
+For efficiency, the data never goes through the log: the donor leader writes the blocks of $G_i$
+straight into the recipient leader with one-sided RDMA, and the recipient leader replicates them
+to its followers along a chain (Fig.~\ref{fig:migration_flow}).
+We first state the failure model (Section~\ref{sec:fault-model}) and give an overview of the
+protocol (Section~\ref{sec:migration-protocol}).
+We then follow one group through the phases of a migration (Section~\ref{sec:migration-phases}),
+the index update at the recipient (Section~\ref{sec:index_updating}), and the way clients are
+served while it is in progress (Section~\ref{sec:serving-during-migration}).
+Finally we describe how the protocol handles failures (Section~\ref{sec:failure-handling}) and
+how it builds and repairs the chain (Section~\ref{sec:chain-replication}).
+
 \begin{table}[t]
   \centering
   \footnotesize

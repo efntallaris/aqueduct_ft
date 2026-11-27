@@ -42,6 +42,8 @@
 
 \newcommand{\added}[1]{\textcolor{blue!70!black}{#1}}
 \newcommand{\deleted}[1]{\sout{#1}}
+% the size of a majority of a shard group of n replicas, LEADER INCLUDED: (n+1)/2
+\newcommand{\nmaj}{n_{\mathrm{majority}}}
 
 \begin{document}
 
@@ -92,6 +94,11 @@ Under crash failures, \OurImplementation{} can recover a migration transaction i
 % Background and Motivation (background.tex) and Design of SAMM (samm_design.tex) are
 % deliberately not compiled. Both files are kept on disk; re-add them with \appendices
 % followed by an \input of each to bring the appendix back.
+% Start the references on a fresh page. The evaluation's full-width figures are top-only ([t]),
+% so when they cannot be placed as the text goes they pile up and the \FloatBarrier at the end of
+% the evaluation flushes them together; without this \clearpage that flush cut the first column
+% of the references short and \flushbottom stretched it, leaving large gaps between entries.
+\clearpage
 \bibliographystyle{plain}
 \bibliography{paper}
 \input{notes.tex}

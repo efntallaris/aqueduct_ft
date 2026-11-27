@@ -212,6 +212,47 @@ The leader knows at any time how far the data has travelled down the chain.
 Recipient Leader learns that a majority holds $G_i$ once $f$ followers have reported it, without waiting for the rest of the chain.
 Replication to this majority is synchronous. The remaining replicas receive the data asynchronously from the ongoing chain.
 
+% Figures 4 and 5 belong to the evaluation (Sections~\ref{sec:eval-healthy} and~\ref{sec:eval-sota})
+% but are DECLARED HERE, in the last subsection of Section~\ref{sec:protocol}: a figure* cannot land on the
+% page being typeset when LaTeX reads it, and the evaluation now opens on the page these
+% figures should reach. Same reason the original layout declared Figure~\ref{fig:healthy} here.
+\begin{figure*}[t]
+  \centering
+  \begin{subfigure}[t]{4.56in}
+    \hspace*{1.020in}\begin{minipage}{3.46in}\centering
+      \caption{the phases of all three donor--recipient pairs}\label{fig:healthy-phases}
+    \end{minipage}
+    \par\centering\includegraphics{experiments/crash_recovery/figures/HEALTHY.pdf}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{2.40in}
+    \hspace*{0.162in}\begin{minipage}{2.22in}\centering
+      \caption{what the clients see over the same run}\label{fig:healthy-ycsb}
+    \end{minipage}
+    \par\centering\vspace*{0.154in}\includegraphics{experiments/crash_recovery/figures/healthy_ycsb.pdf}
+  \end{subfigure}
+  \caption{No-fault migration.}
+  \label{fig:healthy}
+\end{figure*}
+
+\begin{figure*}[t]
+  \centering
+  \includegraphics{experiments/baselines/figures/baselines_legend.pdf}\\[1pt]
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics{experiments/baselines/figures/baselines.pdf}
+    \caption{YCSB-B (95\% reads/5\% writes)}
+    \label{fig:baselines}
+  \end{subfigure}\hfill
+  \begin{subfigure}[t]{0.49\textwidth}
+    \centering
+    \includegraphics{experiments/baselines/figures/baselines_5050.pdf}
+    \caption{YCSB-A (50\% reads/50\% writes)}
+    \label{fig:baselines5050}
+  \end{subfigure}
+  \caption{SOTA YCSB performance.}
+  \label{fig:baselines-both}
+\end{figure*}
+
 \paragraph{Chain repair.}
 Each replica in the chain keeps a timeout for its successor.
 The timeout starts when the replica forwards $G_i$ to its successor, and stops when the successor acknowledges holding $G_i$.
