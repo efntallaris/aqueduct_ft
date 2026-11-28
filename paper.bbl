@@ -39,6 +39,11 @@ Brian~F. Cooper, Adam Silberstein, Erwin Tam, Raghu Ramakrishnan, and Russell Se
 Benchmarking cloud serving systems with ycsb.
 In {\em Proceedings of the 1st ACM Symposium on Cloud Computing}, SoCC '10, page 143–154, New York, NY, USA, 2010. Association for Computing Machinery.
 
+\bibitem{albatross}
+Sudipto Das, Shoji Nishimura, Divyakant Agrawal, and Amr El~Abbadi.
+Albatross: Lightweight elasticity in shared storage databases for the cloud using live data migration.
+{\em Proc. VLDB Endow.}, 4(8):494--505, May 2011.
+
 \bibitem{dynamodb}
 Giuseppe DeCandia, Deniz Hastorun, Madan Jampani, Gunavardhan Kakulapati, Avinash Lakshman, Alex Pilchin, Swaminathan Sivasubramanian, Peter Vosshall, and Werner Vogels.
 Dynamo: Amazon’s highly available key-value store.

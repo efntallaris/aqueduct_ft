@@ -12,9 +12,9 @@
     S2  & donor leader crashes                &  9.04 \\
     S3  & both leaders crash                  &  9.83 \\
     \addlinespace[3pt]
-    S4  & group only on the dead leader      &  9.36 \\
+    S4  & data only on the dead recipient leader      &  9.36 \\
     S5  & crash after \texttt{TRANSFER\_DURABLE} &  9.09 \\
-    S6  & group on leader and F1 but not F2  & 10.09 \\
+    S6  & data on recipient leader and on F1 but not F2  & 10.09 \\
     \bottomrule
   \end{tabular}
   \caption{The six crash scenarios.}
@@ -35,10 +35,10 @@ The testbed is 12 CloudLab~\cite{cloudlab} c6620 nodes, ten running the store an
 Each node has a 28-core Intel Xeon Gold 5512U at 2.1GHz and 128GB of memory, and the migration runs with RDMA over a 100GbE link, on the node's Intel E810-C NIC.
 The Redis Cluster initially starts with 3 shard groups of 3 replicas each, and scales to 6 shard groups after the elasticity action. Three donor shard groups hand 2730 slots each to three recipient shard groups. The block size is 2MB per block. The overall dataset size is \added{161.5GB, of which the 8190 migrated slots hold 80.7GB}.
 \added{Every key-value pair is 1KB, so the dataset holds 157.7 million pairs and the migrated slots hold 78.8 million of them.}
-The migration between each pair is split into 4 groups, each one consisting of 682 slots, $G_1$ to $G_4$, \added{and each group holds 6.7GB of the dataset}.
+The migration between each pair is split into $k = 4$ groups, each one consisting of 682 slots, $G_1$ to $G_4$, \added{and each group holds 6.7GB of the dataset}.
 
 We use two YCSB Clients to generate workloads while the migration is running.
-We use a Zipfian distribution and the YCSB-A workload.
+We use a Zipfian distribution with the YCSB-A and YCSB-B workloads.
 \textcolor{red}{TBD: why Zipf and why the YCSB-A workload.}
 We evaluate three cases.
 In the failure-free case the migration runs to completion with no node killed (Figure~\ref{fig:healthy}).
@@ -48,8 +48,6 @@ Table~\ref{tab:scenarios} lists the six scenarios.
 
 \subsection{The failure-free case}
 \label{sec:eval-healthy}
-
-% it, so declared in evaluation.tex it could not land earlier than the page after.
 
 Figure~\ref{fig:healthy} shows a migration with no fault.
 Figure~\ref{fig:healthy}a presents the breakdown of the migration duration.
@@ -70,10 +68,10 @@ Before the migration the throughput is 136--153Kops/s and the latency is 5.0ms.
 After the migration with six shards the throughput is 274--286Kops/s and the latency is 2.8ms.
 Throughput and latency do not have any impact throughout the migration.
 
-\subsection{Comparison against the state of the art}
+\subsection{Comparison with baselines}
 \label{sec:eval-sota}
 
-{\color{red}
+
 In Figure~\ref{fig:baselines-both} we see \OurImplementation{}, \OurImplementation{} + FT
 and Rocksteady~\cite{rocksteady}, for workloads YCSB-A (Fig.~\ref{fig:baselines5050}) and
 YCSB-B (Fig.~\ref{fig:baselines}).
@@ -123,9 +121,6 @@ Fault tolerance therefore costs steady-state throughput rather than migration ti
 Section~\ref{sec:eval-replicas} examines how a wider recipient group lengthens the
 migration.
 
-% Figures 6 and 7 are discussed in Section~\ref{sec:eval-scaleout} but DECLARED HERE, at the end of
-% the previous subsection: a figure* cannot land on the page being typeset when LaTeX reads
-% it, so declared at the head of their own subsection they fell a page behind their text.
 \begin{figure*}[t]
   \centering
   \includegraphics{experiments/crash_recovery/figures/grid6.pdf}
@@ -133,7 +128,6 @@ migration.
   \label{fig:grid6}
 \end{figure*}
 
-% text above it changes length.
 \definecolor{cgOne}{HTML}{2E2E2E}\definecolor{cgTwo}{HTML}{646464}%
 \definecolor{cgThree}{HTML}{A3A3A3}\definecolor{cgFour}{HTML}{D6D6D6}%
 \definecolor{cgRed}{HTML}{C0392B}%
@@ -212,10 +206,10 @@ Rocksteady hands ownership to the target at the start and pulls records on deman
 clients see a partly migrated store for the whole migration.
 \OurImplementation{} moves one group at a time and makes that group durable before it
 cuts over, which bounds what the client sees to the 6--7s the four groups take.
-}
 
 \subsection{Elasticity with fault injections}
 \label{sec:eval-scaleout}
+
 
 Figure~\ref{fig:grid6} shows the throughput and latency of the YCSB clients.
 The dashed lines are the time that the crash was injected.
@@ -279,23 +273,41 @@ Missing async replications in crashes S1, S3, S4, S5 and S6 are due to the shard
 \subsection{The cost of a bigger recipient shard group}
 \label{sec:eval-replicas}
 
+
 \begin{figure*}[t]
   \centering
-  \includegraphics{experiments/replica_count/figures/replicas_3v5.pdf}
+  \includegraphics[width=\textwidth]{experiments/allpairs/figures/pairwise_all5.pdf}
   \caption{3 replicas vs 5 replicas.}
   \label{fig:replicas}
 \end{figure*}
 
 \texttt{TRANSFER\_DURABLE($G_i$)} is committed once a majority of the shard group holds that data.
 The bigger the shard group, the longer the chain replication takes (the time until a majority is reached).
-Figure~\ref{fig:replicas} shows the same no-fault migration for shard groups with 3 replicas (Figure~\ref{fig:replicas}a) and 5 replicas (Figure~\ref{fig:replicas}b).
-On the y axis we see the phases of the migration and on the x axis we see the time of migration for four groups.
+Figure~\ref{fig:replicas} shows the same no-fault migration with every shard group at 3
+replicas (Figure~\ref{fig:replicas}a) and every shard group at 5 replicas
+(Figure~\ref{fig:replicas}b).
+The scale-out moves three pairs of shard groups, \texttt{sg1} to \texttt{sg4}, \texttt{sg2}
+to \texttt{sg5} and \texttt{sg3} to \texttt{sg6}, and each pair moves its slots in four
+groups, so each panel holds twelve rounds on one time axis.
+On the y axis we see the phases of the migration and on the x axis the time of the
+migration.
 
-The donor's transfer is the same in the two runs, and so is the index update, both 0.50s to 0.51s per group.
+The donor's transfer is the same in the two runs, and so is the index update, both 0.50s to
+0.51s per group in all twelve rounds of both panels.
 What changes is the chain replication and the async chain replication.
-With three replicas the group is durable once two replicas hold it, the leader and F1, which is one hop and takes 0.50s to 0.51s per group.
-With five replicas it is durable once three replicas hold it, the leader, F1 and F2, which is two hops and takes 1.07s to 1.26s per group.
-Over the four groups this is 2.22s against 2.99s, a penalty of 0.77s.
-The extra cost is the time of the extra hop and no extra work for the group, with the benefit of one more tolerated failure.
+With three replicas the group is durable once two replicas hold it, the leader and F1, which
+is one hop and takes 0.50s to 0.51s per group.
+With five replicas it is durable once three replicas hold it, the leader, F1 and F2, which
+is two hops and takes 1.02s to 1.08s per group.
+Over the four groups of a pair this is 2.02s to 2.04s against 4.17s to 4.27s, so a pair
+takes 3.26s to 3.44s at three replicas and 5.99s to 6.15s at five.
+The extra cost is the time of the extra hop and no extra work for the group, with the
+benefit of one more tolerated failure.
+The three pairs behave the same way, and widening the first pair does not disturb the two
+that follow it, so the penalty is per hop and does not accumulate across the scale-out.
+
+A wider recipient shard group costs one further chain hop for each
+additional step of the majority, and nothing else. Every pair of the scale-out pays the same
+hop, so the cost is paid per pair rather than compounding across the cluster.
 
 \FloatBarrier

@@ -3,7 +3,8 @@
 \label{sec:log-entries}
 
 During migration a set of slots is being moved from a donor shard group to a recipient shard group.
-A coordinator $C$ splits the slots into \emph{migration groups} $G_1, \dots, G_n$ and instructs the donor leader to migrate them to the recipient leader.
+A coordinator $C$ splits the slots into $k$ \emph{migration groups} $G_1, \dots, G_k$ and instructs the donor leader to migrate them to the recipient leader.
+These groups are the $k$ chunks of the model of Section~\ref{sec:motivation}, so splitting a migration into groups is what lets every link of the chain carry a different one at the same time, and $k$ is the knob of Eq.~\eqref{eq:chain}.
 Groups are moved in the form of a transaction, by the \emph{Migration Manager (MM)} (a dedicated thread that controls the migration) of each leader.
 Each group $G_i = \{s_1, \dots, s_m\}$ is a set of slots, and each slot $s_j$ contains the keys that map to it (e.g., by hashing), together with their values.
 The key-value pairs of a slot are stored in blocks of SAMM allocator that the slot owns.
@@ -35,7 +36,7 @@ A newly elected leader that is missing the data of $G_i$ can fetch the data from
 \end{figure*}
 \fi
 
-\subsection{Migrating replication protocol}
+\subsection{Migration replication protocol}
 \label{sec:migration-phases}
 \label{sec:intra-donor}
 \label{sec:leader-to-leader}
@@ -83,9 +84,6 @@ Because new writes for $G_i$ go to the recipient leader during the migration, th
 Index update detects and discards such stale entries, keeping only the most recent values of the keys (by not allowing index update threads to update the index if the key already exists, since that key was modified during the transfer).
 The recipient leader and its replicas also keep tombstones for keys that have been deleted while \texttt{TXN\_START($G_i$)} is active, and the index update skips keys that have a tombstone.
 The tombstones of $G_i$ are removed once the index update for $G_i$ finishes.
-
-\noindent\textbf{Index update during recovery of the recipient leader.}
-\textcolor{red}{TBD.}
 
 \subsection{Serving client requests during migration}
 \label{sec:serving-during-migration}
@@ -138,11 +136,6 @@ On any reply other than \texttt{DURABLE}, it keeps sending \texttt{QUERY\_STATE(
 If the replicas holding the data crash after a \texttt{TRANSFERRED} reply, the recipient leader asks for the data again.
 The donor leader can always serve the data of $G_i$ since the index already has it until \texttt{DONE($G_i$)} commits.
 
-% The two recovery algorithms are set SIDE BY SIDE in one full-width float: declared as
-% separate single-column floats they were placed on different pages (donor on one, recipient
-% on the next), which splits a pair meant to be read together. [H] inside the minipages
-% pins each algorithm in place; the enclosing figure* carries no caption of its own, so the
-% figure counter is untouched and the algorithms keep their own numbers.
 \begin{figure*}[t]
   \begin{minipage}[t]{0.48\textwidth}
     \input{pseudocodes/migration_donor_recovery.tex}
@@ -165,6 +158,42 @@ The leader then resumes the intra-recipient phase, replicating the data to the r
 Once a majority holds the data, it commits \texttt{TRANSFER\_DURABLE($G_i$)}.
 The leader obtains the data before waiting for a majority.
 If every replica that held the data has crashed, no majority can form until the data arrives again.
+
+
+\paragraph{Index update during recovery of the recipient leader.}
+The index update never decides the value of a key on its own.
+A key-value pair that arrives through the replicated log always dominates the copy that arrives
+in the migrated blocks, in whatever order the two reach the recipient.
+Three rules give this.
+An index update thread installs a key from a block only if the key is absent from the index.
+Applying a log entry, on the other hand, always writes the index, so it overwrites whatever an
+index update thread may have put there already.
+A delete that arrives through the log leaves a tombstone, and an index update thread skips
+every key that carries one.
+The first two rules settle a write in either order, because the index update either finds the
+key and leaves it alone or is overwritten by the log afterwards.
+The third settles a delete.
+The tombstones are synchronised through the log as well, so every replica of the recipient
+shard group holds the same ones, and a newly elected leader finds the tombstones of $G_i$
+already in place.
+
+Consider a key $k$ that sits in a block of $G_i$ with the old value $v_0$, and a client that
+writes $k = v_1$ at the recipient after \texttt{TXN\_START($G_i$)}.
+If the write commits first, the index update finds $k$ in the index and leaves it alone, so $k$
+keeps $v_1$.
+If the index update runs first, it installs $v_0$, and the write then overwrites it with $v_1$.
+Let the client delete $k$ instead.
+If the delete commits first, the index update finds the tombstone and skips $k$.
+If the index update runs first, it installs $v_0$, and the delete then removes the entry and
+leaves the tombstone behind.
+Either order ends with $v_1$ in the first case and with $k$ absent in the second.
+
+A crash of the recipient leader changes nothing in this picture.
+The new leader runs the index update of $G_i$ again from the start, over an index that already
+holds every committed write of $G_i$ and over the tombstones the log has synchronised.
+The replay can therefore only fill in keys that the log never touched.
+It cannot overwrite a value that a client wrote during the migration, and it cannot bring back
+a key that was deleted.
 
 
 \paragraph{Timeouts.}
@@ -212,10 +241,6 @@ The leader knows at any time how far the data has travelled down the chain.
 Recipient Leader learns that a majority holds $G_i$ once $f$ followers have reported it, without waiting for the rest of the chain.
 Replication to this majority is synchronous. The remaining replicas receive the data asynchronously from the ongoing chain.
 
-% Figures 4 and 5 belong to the evaluation (Sections~\ref{sec:eval-healthy} and~\ref{sec:eval-sota})
-% but are DECLARED HERE, in the last subsection of Section~\ref{sec:protocol}: a figure* cannot land on the
-% page being typeset when LaTeX reads it, and the evaluation now opens on the page these
-% figures should reach. Same reason the original layout declared Figure~\ref{fig:healthy} here.
 \begin{figure*}[t]
   \centering
   \begin{subfigure}[t]{4.56in}

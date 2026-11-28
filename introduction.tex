@@ -1,14 +1,6 @@
 \section{Introduction}
 \label{sec:introduction}
 
-% DRAFT, marked red with the {\color{red} ... } convention used in evaluation.tex.
-% Written from the abstract and from the notes that were commented out in this file:
-%   "in non-replicated systems, migration performance is impacted when considering
-%    replicated setups, leading to reduced migration throughput and higher duration"
-%   "Existing solutions consider migration and replication two different actions.
-%    In our case we integrate migration into replication"
-% The numbers below are taken from Section~\ref{sec:evaluation} as it currently reads.
-
 Modern data centers absorb load variations by scaling their storage tier elastically:
 shards of the key space are redistributed across nodes while the store keeps serving
 clients~\cite{slicer,shard-manager,akkio}.
@@ -52,12 +44,20 @@ YCSB~\cite{ycsb} workloads driven while migrations are in progress.
 Integrating replication into the migration costs 6.4\% of steady-state throughput under a
 read-heavy workload and 9.3\% under a write-heavy one, while the duration of the migration
 itself is unchanged at three replicas per shard group.
-A state-of-the-art system that does not integrate the two is affected far more severely:
-Rocksteady~\cite{rocksteady} loses 71\% of its throughput and takes 77s to reach its new
-plateau on the read-heavy workload, against 6\% for 6s for \OurImplementation{}.
-Under crashes injected during a migration, \OurImplementation{} recovers the migration
-transaction in less than 3.4s and completes it less than 3s slower than a failure-free
-migration.
+The chain hop of one group overlaps the transfer of the next, so the four groups of a pair
+contribute 2.02s of chain replication without lengthening the migration at all, and a wider
+shard group costs only the extra hop, one further hop per additional step of the majority.
+The migration moves 80.7GB in 7.09s, which is 91.1Gb/s over a 100GbE link while the clients
+keep running.
+A state-of-the-art system that does not integrate the two is affected far more severely.
+Rocksteady~\cite{rocksteady} loses 72\% of its throughput and spends 88s below its
+pre-migration level on the read-heavy workload, against 0.9\% over the seven seconds of the
+migration for \OurImplementation{}.
+Under six crash scenarios injected during a migration, every migration still runs to
+completion, recovering in less than 3.4s and finishing at most 3s later than a failure-free
+one.
+Failure detection accounts for 41--66\% of that recovery rather than the migration protocol,
+and the keys outside the crashed shard group are served again within 0.28s.
 
 In summary, our contributions in this paper are :
 \begin{itemize}
