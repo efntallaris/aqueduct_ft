@@ -1,0 +1,57 @@
+Aqueduct YCSB: no replicas against the fault-tolerant protocol (3 replicas)
+Both mixes, both MEASURED, reads served by the LEADER. 2026-11-26.
+
+Imported from ~/Downloads/csv (ycsb_per_second.csv + runs.csv) by
+import_ycsb_suite.py, included here. Arms:
+
+              no replication   3 replicas
+  50/50       N50              Q50
+  95/5        N95              Q95
+
+quorum_reads=local in the export, i.e. the leader serves the read. The export's
+"quorum" arms (NRq50/R3q50/NRq95/R3q95) and the leader-alone arms (L50/L95) measure
+a read path Aqueduct does not use and are NOT in this bundle; re-run the importer
+with --read-mode quorum for those.
+
+LAYOUT  (5050 = 50/50 mix, 955 = 95/5 mix)
+
+  <mix>/aqueduct/throughput_latency_aqueduct.csv        no replication, plot series
+  <mix>/aqueduct_ft/throughput_latency_aqueduct_ft.csv  3 replicas,     plot series
+      second,entry_id,current_ops,latency_median,latency_99_9,latency_write,
+      in_migration_window
+      current_ops is ops/s, the latencies are MICROSECONDS. latency_median is the
+      read mean, latency_write the update mean, latency_99_9 is EMPTY -- the clients
+      ran YCSB timeseries, which reports no percentile. entry_id codes the phase
+      (0 before, 1 during, 2 after). Axis: second = export t_s + 20, so the
+      migration starts at second 20 in every file.
+
+  <mix>/rocksteady/throughput_latency_rocksteady.csv    the Rocksteady baseline,
+      copied as it stands from data/<mix>/rocksteady/. Its own schema (five columns,
+      no latency_write or in_migration_window) and its own axis: 0-160 s, migration
+      10-86.
+
+  <mix>/ycsb_per_second_norepl.csv   the same two runs, one row per second, in
+  <mix>/ycsb_per_second_3rep.csv     kops/s and MILLISECONDS
+
+  <mix>/phase_stats_norepl.csv       per-phase throughput and latency, one arm each
+  <mix>/phase_stats_3rep.csv
+  <mix>/phase_stats_3rep_vs_norepl.csv   both arms in one table
+  <mix>/phase_stats_3rep_vs_norepl.txt   the same, as prose, with the gaps worked out
+
+  aqueduct_vs_ft_differences.csv     THE DIFFERENCES: per mix x phase x metric, both
+                                     arms, delta, ratio and percent
+  aqueduct_vs_ft_percentiles.csv     whole-run p50..p99.99 per mix, op and arm, with
+                                     deltas. RUN-LEVEL: these span the migration too,
+                                     so they do not belong on the time axis.
+
+Phases are each run's own: before = its first second to 19, during = the logged
+migration window, after = the rest. The migration band is 20-27 in all four runs
+(logged 7.02-7.32 s).
+
+READ THIS BEFORE QUOTING THE "DURING" MEANS. They are a transient, not a level: each
+run dips and then climbs as groups land, and the standard deviations exceed the gap
+between the arms. Quote before and after, and the dip ratio for the migration itself.
+
+Every Aqueduct value is a measured second: nothing modelled, jittered or
+extrapolated. The Rocksteady files are the generated baseline from the tree, included
+unchanged.

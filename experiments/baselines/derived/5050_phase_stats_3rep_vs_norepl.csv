@@ -1,0 +1,7 @@
+scenario,label,phase,t_from,t_to,seconds,tput_mean_kops_s,tput_sd_kops_s,tput_min_kops_s,tput_max_kops_s,read_mean_ms,write_mean_ms
+NR_NOREPL,no replication,before,3,19,17,181.6,1.5,178.6,184.1,3.318,5.482
+NR_NOREPL,no replication,during,20,27,8,216.6,54.2,174.6,334.8,2.98,4.777
+NR_NOREPL,no replication,after,28,88,61,333.5,7.4,311.3,348.5,1.826,2.959
+R3_3REPLICAS,3 replicas,before,4,19,16,170.7,1.4,167.0,172.6,2.304,7.067
+R3_3REPLICAS,3 replicas,during,20,27,8,187.9,27.0,171.2,255.7,2.169,6.488
+R3_3REPLICAS,3 replicas,after,28,89,62,302.6,5.8,280.4,309.7,1.347,3.937

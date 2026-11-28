@@ -1,0 +1,21 @@
+% Builds one standalone PDF per panel of the topology figure, so the panels can be
+% viewed or dropped into slides without opening paper.pdf. `make -C illustrations out`
+% drives it; \PANEL picks which panel this run emits.
+%
+% The preamble mirrors the paper's: IEEEtran sets the text in Times and paper.tex adds
+% newtxmath so the math matches, and the panels hard-code \fontfamily{ptm} for their
+% own labels. Reproducing both here is what keeps an exported panel identical to the
+% one in paper.pdf rather than a Computer Modern lookalike.
+\documentclass[border=2pt]{standalone}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{mathptmx}
+\usepackage{newtxmath}
+\usepackage{tikz}
+\usepackage{subcaption}
+\usetikzlibrary{arrows.meta,decorations.pathreplacing,patterns}
+\newcommand{\nmaj}{n_{\mathrm{majority}}}
+\newcommand{\OurImplementation}{AnoSys}
+\input{topology.tex}
+\begin{document}
+\csname PANELBODY\endcsname
+\end{document}

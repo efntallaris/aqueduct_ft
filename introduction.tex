@@ -1,32 +1,71 @@
 \section{Introduction}
 \label{sec:introduction}
 
-Elastically scaling distributed key-value stores (redistributing key-value shards in an online manner) is an important way to gracefully absorb load variations in modern data centers, and rapid data migration is a key enabler of elasticity.
+Modern data centers absorb load variations by scaling their storage tier elastically:
+shards of the key space are redistributed across nodes while the store keeps serving
+clients~\cite{slicer,shard-manager,akkio}.
+How quickly a cluster reacts depends on how fast it moves data, which is why rapid data
+migration has received sustained attention in distributed key-value stores
+(KVSs)~\cite{rocksteady,netmigrate}.
 
-While several distributed key-value stores (KVSs) have targeted rapid data migration, none so far have investigated the efficent integration of data migration and replication mechanisms, nor have they studied fault-tolerance aspects of the data migration process (i.e., its robustness under failures).
-%in non-replicated systems, migration performance is impacted when considering replicated setups, 
-%leading to reduced migration throughput and higher duration. 
-%Existing solutions consider migration and replication two different actions. In our case we integrate migration into replication
+Production deployments, however, are replicated.
+Each shard is held by a group of replicas kept consistent by a leader-based protocol such
+as Raft~\cite{raft,paxos-simple}, for both durability and availability.
+Work on rapid migration has largely been designed and measured in non-replicated
+settings, and two problems follow from that.
+First, migration performance reported without replication does not carry over: in a
+replicated deployment the same mechanisms sustain lower migration throughput and longer
+migrations, because every record that moves must also reach the followers of the recipient
+group.
+Second, migration and replication are treated as two independent actions, so a migration
+in flight is not covered by the guarantees that the replication protocol already provides,
+and the behaviour of the migration itself under failures has not been studied.
 
-In this paper we present \OurImplementation{}, 
-a distributed KVS that integrates the data migration and replication protocols, using a variant of chain-replication for efficient pipelined bulk RDMA transfers, while migration control actions follow the standard replication protocol.
-\OurImplementation{} schedules data-migration in the manner of a transaction and is thus recoverable and robust to crash failures.
+In this paper we present \OurImplementation{}, a distributed KVS in which data migration
+and replication form one integrated protocol rather than two mechanisms layered one on top
+of the other.
+Bulk data moves from the donor to the recipient group through a variant of chain
+replication~\cite{chain-replication} that pipelines large RDMA~\cite{Infiniband-spec}
+transfers across the replicas of the recipient group, so that the replication of one group
+of slots overlaps the transfer of the next instead of following it.
+The control actions of a migration (when a group of slots starts moving, when its data
+has become durable, and when ownership changes hands) are appended to the replicated log
+and therefore follow the standard replication protocol.
 
-Our experiments demonstrate that \OurImplementation{} can migrate shards between replica groups only 10\% 
-slower than its non-replicated version; in contrast, competing systems (e.g., RAMCloud variants such as Rocksteady) are significantly impacted when migrating data in replicated settings.
-Under crash failures, \OurImplementation{} can recover a migration transaction in less than 3.4 seconds and complete it less than 3 seconds slower than failure-free migration.
+Because those control actions are logged, \OurImplementation{} schedules a migration in
+the manner of a transaction.
+A migration is atomic with respect to ownership, and the crash of a donor or a recipient
+leader is recovered by replaying the log rather than by abandoning and restarting the
+transfer, so a migration survives the failures that the shard groups are already
+provisioned to survive.
 
-%
+We evaluate \OurImplementation{} on a 12-node RDMA cluster~\cite{cloudlab} under
+YCSB~\cite{ycsb} workloads driven while migrations are in progress.
+Integrating replication into the migration costs 6.4\% of steady-state throughput under a
+read-heavy workload and 9.3\% under a write-heavy one, while the duration of the migration
+itself is unchanged at three replicas per shard group.
+The chain hop of one group overlaps the transfer of the next, so the four groups of a pair
+contribute 2.02s of chain replication without lengthening the migration at all, and a wider
+shard group costs only the extra hop, one further hop per additional step of the majority.
+The migration moves 80.7GB in 7.09s, which is 91.1Gb/s over a 100GbE link while the clients
+keep running.
+A state-of-the-art system that does not integrate the two is affected far more severely.
+Rocksteady~\cite{rocksteady} loses 72\% of its throughput and spends 88s below its
+pre-migration level on the read-heavy workload, against 0.9\% over the seven seconds of the
+migration for \OurImplementation{}.
+Under six crash scenarios injected during a migration, every migration still runs to
+completion, recovering in less than 3.4s and finishing at most 3s later than a failure-free
+one.
+Failure detection accounts for 41--66\% of that recovery rather than the migration protocol,
+and the keys outside the crashed shard group are served again within 0.28s.
+
 In summary, our contributions in this paper are :
 \begin{itemize}
 \item We implemented a migration protocol which is integrated with a linearizable replication protocol (such as Raft).
 \item RDMA transfers between replicas within shard take place through a chain-replication variant 
 while migration control actions are still replicated via Raft.
 \item Migration actions are transactional and are recoverable under a variety of failures.
-\item Experiments demonstrate that \OurImplementation{} can migrate shards between replica groups only \% 
-slower than non-replicated Aqueduct, whereas RAMCloud variants such as Rocksteady are signifantly impacted in replicated settings.
-\item Under crash failures, \OurImplementation{} can recover a migration transaction in less than xx seconds and complete it, 
-with a less than \% percent slowdown compared to failure-free migration.
 \end{itemize}
 
-The remainder of this paper proceeds as follows:  In Section ...
+Section~\ref{sec:protocol} presents the fault-tolerant migration protocol and the failure
+model it assumes, and Section~\ref{sec:evaluation} evaluates it.

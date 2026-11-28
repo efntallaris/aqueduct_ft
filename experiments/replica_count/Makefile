@@ -4,7 +4,7 @@ PAIR  := A
 SIDE  ?= 1
 WIDTH := 7.0
 
-FONT_DIR ?= $(patsubst %/,%,$(dir $(shell kpsewhich texgyretermes-regular.otf 2>/dev/null)))
+FONT_DIR ?= $(patsubst %/,%,$(dir $(shell kpsewhich texgyretermes-regular.otf)))
 ifneq ($(FONT_DIR),)
 export FONT_DIR
 endif
@@ -17,7 +17,7 @@ unexport CMU_DIR
 
 ifeq ($(wildcard data/D3_r1),)
 all:
-	@echo "experiments/replica_count: no data/, keeping the committed PDF"
+	@echo experiments/replica_count: no data/, keeping the committed PDF
 else
 
 all: figures/replicas_3v5.pdf figures/replicas_allpairs.pdf figures/replicas_projected.pdf

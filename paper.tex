@@ -1,13 +1,8 @@
-% DSN 2027: IEEE Computer Society 8.5x11 two-column, 10pt on 12pt leading.
 \documentclass[conference,letterpaper,10pt]{IEEEtran}
 \IEEEoverridecommandlockouts
 \usepackage{float}
 
 \usepackage{amsmath,amssymb,amsfonts}
-% IEEEtran sets the text in Times (ptm) but leaves math in Computer Modern, which
-% prints $G_i$ in a different face from the surrounding words and from the figures,
-% whose labels are TeX Gyre Termes with STIX math. newtxmath puts the math in Times
-% too, so the paper and the figures carry one typeface throughout.
 \usepackage{newtxmath}
 \usepackage{graphicx}
 \usepackage[font=small,labelfont=bf]{subcaption}
@@ -23,10 +18,11 @@
 \usetikzlibrary{arrows.meta,decorations.pathreplacing,patterns}
 \newcommand{\mstep}[1]{\tikz[baseline={([yshift=-0.34em]s.center)}]\node[circle,fill=black!85,text=white,inner sep=0pt,minimum size=8.4pt,text height=4.65pt,text depth=0.6pt,font=\fontsize{6.5}{6.5}\fontfamily{phv}\bfseries\selectfont](s){\ifnum#1=1 \kern0.72pt\fi#1};}%
 \usepackage{placeins}
+\usepackage[normalem]{ulem}
 \renewcommand{\topfraction}{0.9}
 \setcounter{topnumber}{2}
-\widowpenalty=10000
-\clubpenalty=10000
+%\widowpenalty=10000
+%\clubpenalty=10000
 \renewcommand{\textfraction}{0.07}
 \renewcommand{\floatpagefraction}{0.8}
 \setlength{\abovecaptionskip}{4pt}
@@ -40,6 +36,9 @@
 \algnewcommand{\EndUpon}{\Statex \textbf{end upon}}
 
 \newcommand{\added}[1]{\textcolor{blue!70!black}{#1}}
+\newcommand{\deleted}[1]{\sout{#1}}
+
+\newcommand{\nmaj}{n_{\mathrm{majority}}}
 
 \begin{document}
 
@@ -48,23 +47,6 @@
 \title{Integrating Data Migration with Replication in Distributed Key-Value Stores}
 
 \author{\IEEEauthorblockN{Author list omitted for double-blind reviewing}}
-
-%\author{
-%\IEEEauthorblockN{Author 1}
-%\IEEEauthorblockA{Institution 1\\
-%City, Country\\
-%author1@institution1.org}
-%\and
-%\IEEEauthorblockN{Author 2}
-%\IEEEauthorblockA{Institution 2\\
-%City, Country\\
-%author2@institution2.org}
-%\and
-%\IEEEauthorblockN{Author 3}
-%\IEEEauthorblockA{Institution 3\\
-%City, Country\\
-%author3@institution3.org}
-%}
 
 \maketitle
 
@@ -76,17 +58,18 @@ While several distributed key-value stores (KVSs) have targeted rapid data migra
 In this paper we present \OurImplementation{}, 
 a distributed KVS that integrates the data migration and replication protocols, using a variant of chain-replication for efficient pipelined bulk RDMA transfers, while migration control actions follow the standard replication protocol.
 \OurImplementation{} schedules data migrations as transactions, namely as an atomic actions that are also robust to crash failures.
-Our experiments demonstrate that \OurImplementation{} can migrate shards between replica groups only 10\% 
-slower than its non-replicated version; in contrast, competing systems (e.g., RAMCloud variants such as Rocksteady) are significantly impacted when migrating data in replicated settings.
-Under crash failures, \OurImplementation{} can recover a migration transaction in less than 3.4 seconds and complete it less than 3 seconds slower than failure-free migration.
+Our experiments demonstrate that replication leaves the duration of a migration unchanged at three replicas per shard group, and is paid in steady-state throughput instead.
+In contrast, competing systems (e.g., RAMCloud variants such as Rocksteady) are significantly impacted when migrating data in replicated settings.
+Under crash failures, \OurImplementation{} can recover a migration transaction in less than 3.4 seconds and complete it at most 3 seconds slower than failure-free migration.
 \end{abstract}
 
 \input{introduction.tex}
-\input{background.tex}
+\input{motivation.tex}
 \input{design.tex}
 \input{evaluation.tex}
 \input{migration_rdma_faq.tex}
 
+\clearpage
 \bibliographystyle{plain}
 \bibliography{paper}
 \input{notes.tex}

@@ -1,0 +1,326 @@
+\definecolor{ink}{RGB}{34,34,34}
+\definecolor{irfill}{gray}{0.86}
+\definecolor{majfill}{gray}{0.88}
+\newcommand{\topozoom}{1.04}
+\newcommand{\topoplotzoom}{0.75}
+\tikzset{topostyle/.style={%
+    font=\fontsize{7.5}{9}\fontfamily{ptm}\selectfont,
+    >={Stealth[length=4pt,width=3.2pt]},
+    shard/.style={draw=ink,line width=0.6pt,fill=white,rounded corners=1.5pt,
+                  minimum width=26pt,minimum height=14pt,inner sep=0pt},
+    leader/.style={shard,fill=ink,text=white,font=\fontsize{7.5}{9}\fontfamily{ptm}\bfseries},
+    bulk/.style={->,draw=ink,line width=1.8pt,>={Stealth[length=5pt,width=5pt]}},
+    abulk/.style={bulk,dash pattern=on 3pt off 2pt},
+    notify/.style={->,draw=ink,line width=0.6pt,dash pattern=on 2.2pt off 1.4pt,
+                   rounded corners=2pt},
+    lbl/.style={inner sep=1pt,text=ink},
+    phase/.style={rounded corners=2pt},
+    rolelbl/.style={lbl,font=\fontsize{7}{8}\fontfamily{ptm}\itshape},
+    chunk/.style={draw=ink,line width=0.6pt,fill=irfill,minimum width=18pt,
+                  minimum height=10pt,inner sep=0pt,
+                  font=\fontsize{6.6}{7.4}\fontfamily{ptm}\selectfont},
+}}
+
+\newcommand{\topopanel}[1]{%
+\scalebox{\topozoom}{%
+\begin{tikzpicture}[x=1pt,y=-1pt,topostyle]
+  % --- geometry --------------------------------------------------------------
+  \def\Dspine{6}   \def\Dx{46}           % donor: log spine, replica column
+  \def\Rx{136}     \def\Rspine{174}      % recipient: replica column, log spine
+  \def\rowa{22} \def\rowb{48} \def\rowc{74} \def\rowd{100} \def\rowe{126}
+
+  % one bounding box for all three panels, so that they scale alike
+  \useasboundingbox (0,0) rectangle (178,148);
+
+  % --- which shard group each column is, in the style of illustrations/1.tex ---
+  \node[font=\fontsize{7.5}{9}\fontfamily{ptm}\bfseries,anchor=base] at (\Dx,6) {Donor shard group};
+  \node[font=\fontsize{7.5}{9}\fontfamily{ptm}\bfseries,anchor=base] at (\Rx,6) {Recipient shard group};
+  \draw[ink,line width=0.5pt] (\Dx-16,13) -- ++(0,-2) -- (\Dx+16,11) -- ++(0,2);
+  \draw[ink,line width=0.5pt] (\Rx-16,13) -- ++(0,-2) -- (\Rx+16,11) -- ++(0,2);
+
+  % --- the replicas that make the group durable -----------------------------
+  \ifnum#1>1 \fill[phase,majfill] (118,67) rectangle (154,133); \fi
+
+  % --- donor replicas --------------------------------------------------------
+  \node[shard]  at (\Dx,\rowa) {A1};
+  \node[shard]  at (\Dx,\rowb) {A2};
+  \node[shard]  at (\Dx,\rowc) {A3};
+  \node[shard]  at (\Dx,\rowd) {A4};
+  \node[leader] at (\Dx,\rowe) {A5};
+  \node[rolelbl] at (\Dx,141) {leader};
+
+  % --- recipient replicas ----------------------------------------------------
+  \node[shard]  at (\Rx,\rowa) {B1};
+  \node[shard]  at (\Rx,\rowb) {B2};
+  \node[shard]  at (\Rx,\rowc) {B3};
+  \node[shard]  at (\Rx,\rowd) {B4};
+  \node[leader] at (\Rx,\rowe) {B5};
+  \node[rolelbl] at (\Rx,141) {leader};
+
+  % --- replication paths -----------------------------------------------------
+  \foreach \y in {\rowa,\rowb,\rowc,\rowd} {
+    \draw[notify] (\Dx-13,\rowe) -- (\Dspine,\rowe) -- (\Dspine,\y) -- (\Dx-13,\y);
+    \draw[notify] (\Rx+13,\rowe) -- (\Rspine,\rowe) -- (\Rspine,\y) -- (\Rx+13,\y);
+  }
+
+  % --- leader-to-leader bulk transfer ---------------------------------------
+  \draw[bulk] (\Dx+13,\rowe) -- (\Rx-14,\rowe);
+  % The layered panel carries the group as one block. The chain panel carries the
+  % same block split in two, so the two spans match end to end.
+  \ifnum#1=2
+    \node[chunk,minimum width=41pt] at (88,118) {\textit{B}};
+  \else
+    \node[chunk] at (76.5,118) {\textit{B}/\textit{k}};
+    \node[chunk] at (99.5,118) {\textit{B}/\textit{k}};
+  \fi
+  % the brace counts the chunks the group is split into
+  \draw[ink,line width=0.5pt,decorate,decoration={brace,amplitude=3pt}]
+    (67.5,111) -- (108.5,111);
+  \ifnum#1=2
+    \node[lbl,anchor=base] at (88,104) {$k = 1$};
+  \else
+    \node[lbl,anchor=base] at (88,104) {$k = 2$};
+  \fi
+  \node[lbl,inner sep=1.5pt,
+        font=\fontsize{7.5}{9}\fontfamily{ptm}\bfseries] at (90,137) {R};
+
+  % --- how the data reaches the followers ------------------------------------
+  \ifnum#1=2
+    % the leader sends every chunk itself, once per follower
+    \foreach \y in {\rowa,\rowb,\rowc,\rowd}
+      \draw[bulk,rounded corners=2pt] (\Rx-13,122) -- (114,122) -- (114,\y) -- (\Rx-13,\y);
+    \node[lbl,anchor=east,font=\fontsize{7.5}{9}\fontfamily{ptm}\bfseries] at (110,61) {R};
+  \fi
+  \ifnum#1=3
+    % the chain runs up from the leader, the first two hops reach a majority
+    \draw[bulk]  (\Rx,118.5) -- (\Rx,107.5);
+    \draw[bulk]  (\Rx,92.5)  -- (\Rx,81.5);
+    \draw[abulk] (\Rx,66.5)  -- (\Rx,55.5);
+    \draw[abulk] (\Rx,40.5)  -- (\Rx,29.5);
+    % Every hop of the chain is its own link and carries R, so all four are labelled
+    % rather than the second one alone: it is the four labels that let the reader count
+    % the (nmaj - 1) hops to the majority straight off the figure. The y values are the
+    % midpoints of the gaps between the replica rows, and anchor=east puts each label
+    % clear of the replica boxes, which start at \Rx - 13 = 123.
+    \foreach \y in {113,87,61,35}
+      \node[lbl,anchor=east,font=\fontsize{7.5}{9}\fontfamily{ptm}\bfseries] at (120,\y) {R};
+  \fi
+\end{tikzpicture}}%
+}
+
+% The recipient leader drawn in a column of its own, in front of its followers, instead
+% of at the foot of one shared column. #1 picks the topology, matching \topopanel:
+% {2} layered, the leader feeds every follower itself; {3} the chain, it feeds only its
+% successor and the followers relay.
+%
+% Both leaders sit on the bottom row, as they do in \topopanel, so the panels keep that
+% convention and the role labels sit clear beneath them. Putting the recipient leader
+% level with its last follower is what lets the chain's first hop be a straight
+% horizontal rather than a bend down the trunk.
+%
+% The follower rows are evenly spaced, unlike \topopanel's, because the chain hops run
+% between them and uneven rows would make one hop longer than the rest.
+\newcommand{\topopanelfront}[1]{%
+\scalebox{\topozoom}{%
+\begin{tikzpicture}[x=1pt,y=-1pt,topostyle]
+  % --- geometry --------------------------------------------------------------
+  \def\Dspine{6}  \def\Dx{38}                     % donor: log spine, replica column
+  \def\Lx{104}    \def\Fx{148}                    % recipient: leader, followers
+  \def\Btrunk{126} \def\Rspine{176}               % recipient: data trunk, log spine
+  \def\Ly{127}                                    % the row both leaders sit on
+  \def\da{22} \def\db{48} \def\dc{74} \def\dd{100}    % donor followers
+  \def\fa{22} \def\fb{57} \def\fc{92}                 % recipient followers above the
+  % the fourth recipient follower is level with the leader, at \Ly
+
+  % the same bounding box as \topopanel, so the panels scale alike
+  \useasboundingbox (0,0) rectangle (178,148);
+
+  % --- which shard group each column is --------------------------------------
+  \node[font=\fontsize{7.5}{9}\fontfamily{ptm}\bfseries,anchor=base] at (\Dx,6) {Donor shard group};
+  \node[font=\fontsize{7.5}{9}\fontfamily{ptm}\bfseries,anchor=base] at (126,6) {Recipient shard group};
+  \draw[ink,line width=0.5pt] (\Dx-16,13) -- ++(0,-2) -- (\Dx+16,11) -- ++(0,2);
+  % the recipient bracket spans both of its columns, the leader's and the followers'
+  \draw[ink,line width=0.5pt] (87,13) -- ++(0,-2) -- (165,11) -- ++(0,2);
+
+  % --- the replicas that make the group durable ------------------------------
+  % The majority is the leader and the two followers nearest it in the chain, which are
+  % the two the layered leader is waiting on as well. It straddles the two columns, so
+  % it is drawn as one L-shaped region rather than a rectangle per column: two patches
+  % read as two separate groupings, and the point is that these three replicas are one
+  % set. The corners are rounded generously so the shape reads as a cluster enclosing
+  % the boxes rather than as another box.
+  \fill[phase,majfill,rounded corners=5pt]
+    (89,118) -- (133,118) -- (133,83) -- (163,83) -- (163,136) -- (89,136) -- cycle;
+
+  % --- donor replicas, its leader on the bottom row --------------------------
+  \node[shard]  at (\Dx,\da) {A1};
+  \node[shard]  at (\Dx,\db) {A2};
+  \node[shard]  at (\Dx,\dc) {A3};
+  \node[shard]  at (\Dx,\dd) {A4};
+  \node[leader] at (\Dx,\Ly) {A5};
+  \node[rolelbl] at (\Dx,142) {leader};
+
+  % --- recipient leader, in front of its followers ---------------------------
+  \node[leader] at (\Lx,\Ly) {B5};
+  \node[rolelbl] at (\Lx,142) {leader};
+  \node[shard] at (\Fx,\fa) {B1};
+  \node[shard] at (\Fx,\fb) {B2};
+  \node[shard] at (\Fx,\fc) {B3};
+  \node[shard] at (\Fx,\Ly) {B4};
+
+  % --- replication paths -----------------------------------------------------
+  % The donor keeps its spine on the left. The recipient's drops out of the leader and
+  % runs along the foot to a spine on the right, so that it reaches the followers from
+  % the side the data does not and the two paths never share a lane. It leaves from the
+  % leader's right edge so as to clear the role label beneath the box.
+  \foreach \y in {\da,\db,\dc,\dd}
+    \draw[notify] (\Dx-13,\Ly) -- (\Dspine,\Ly) -- (\Dspine,\y) -- (\Dx-13,\y);
+  \foreach \y in {\fa,\fb,\fc,\Ly}
+    \draw[notify] (117,134) -- (117,144) -- (\Rspine,144) -- (\Rspine,\y) -- (\Fx+13,\y);
+
+  % --- donor leader to recipient leader --------------------------------------
+  \draw[bulk] (\Dx+13,\Ly) -- (\Lx-14,\Ly);
+  % The two panels give the chunks the same footprint, x 52.5-88.5 by y 103-120, so that
+  % one undivided block and a two-by-two of four read as the same B split four ways.
+  \ifnum#1=2
+    \node[chunk,minimum width=36pt,minimum height=17pt] at (70.5,111.5) {\textit{B}};
+  \else
+    % Numbered, so that the same numbers can be put on the links below and show which
+    % chunk each one is carrying at the instant the panel depicts.
+    \foreach \i/\x/\y in {1/61.5/107,2/79.5/107,3/61.5/116,4/79.5/116}
+      \node[chunk,minimum width=16pt,minimum height=8pt] at (\x,\y) {\i};
+  \fi
+  \draw[ink,line width=0.5pt,decorate,decoration={brace,amplitude=3pt}]
+    (52.5,99) -- (88.5,99);
+  \ifnum#1=2
+    \node[lbl,anchor=base] at (70.5,92) {$k = 1$};
+  \else
+    \node[lbl,anchor=base] at (70.5,92) {$k = 4$};
+  \fi
+  \node[lbl,inner sep=1.5pt,
+        font=\fontsize{7.5}{9}\fontfamily{ptm}\bfseries] at (70.5,134) {R};
+
+  % --- how the data reaches the followers ------------------------------------
+  \ifnum#1=2
+    % Layered over replication means the migrated data has no path of its own: it reaches
+    % the followers as replicated log entries, so this panel draws no data path at all.
+    % Nothing is split, so the one B that enters the log path is the whole of it, and the
+    % leader sends all of it to each follower in turn over its single uplink. That is the
+    % (nmaj - 1) B/R the panel exists to show, hence one B and one R.
+    % B sits on the spine, the stretch of the log path every branch shares, at the middle
+    % gap between the followers. That is where the lane is free, it keeps the block off
+    % the crowded corner by the leader, and it puts B and R at the same place in the
+    % column that the chain panel puts its chunk markers and theirs.
+    \node[chunk,minimum width=14pt,minimum height=10pt,
+          font=\fontsize{8.5}{10}\fontfamily{ptm}\selectfont] at (170,74.5) {\textit{B}};
+    \node[lbl,anchor=east,font=\fontsize{7.5}{9}\fontfamily{ptm}\bfseries] at (160,74.5) {R};
+  \fi
+  \ifnum#1=3
+    % The leader feeds its successor only, and the chain relays up the column. Every hop
+    % is drawn the same way: the shading already says which replicas form the majority,
+    % so splitting the arrows into majority and non-majority as well only added a second
+    % encoding of the same fact.
+    \draw[bulk] (\Lx+13,\Ly) -- (\Fx-13,\Ly);
+    \draw[bulk] (\Fx,120) -- (\Fx,99);
+    \draw[bulk] (\Fx,85)  -- (\Fx,64);
+    \draw[bulk] (\Fx,50)  -- (\Fx,29);
+    % Every hop carries R, as in \topopanel{3}. A column hop is labelled beside its own
+    % arrow: the gaps between the follower boxes hold no box, so there is room there and
+    % the label need not sit out by the log spine, far from the link it names. The first
+    % hop, being the short horizontal out of the leader, is labelled just above it.
+    \node[lbl,inner sep=1.5pt,
+          font=\fontsize{7.5}{9}\fontfamily{ptm}\bfseries] at (126,138) {R};
+    \foreach \y in {109.5,74.5,39.5}
+      \node[lbl,inner sep=1.5pt,
+            font=\fontsize{7.5}{9}\fontfamily{ptm}\bfseries] at (158,\y) {R};
+    % Which chunk each link carries at one instant of the pipeline. The chain is fed in
+    % order, so the further along the chain a link is, the earlier the chunk on it: the
+    % leader is pushing 4 while 1 is already past the majority. Each marker sits beside
+    % its own wire, with R on the far side, so neither hides the arrow.
+    \node[chunk,minimum width=9pt,minimum height=9pt] at (126,116) {4};
+    \foreach \i/\y in {3/109.5,2/74.5,1/39.5}
+      \node[chunk,minimum width=9pt,minimum height=9pt] at (138,\y) {\i};
+  \fi
+\end{tikzpicture}}%
+}
+
+% An empty slot that reserves exactly the space of a panel, for a third figure.
+\newcommand{\topoblank}{%
+\scalebox{\topozoom}{%
+\begin{tikzpicture}[x=1pt,y=-1pt,topostyle]
+  \useasboundingbox (0,0) rectangle (178,148);
+\end{tikzpicture}}%
+}
+
+% The model the two panels above describe, drawn: the time to get one group onto a
+% majority of the recipient group, against the number of chunks k, for both ways.
+% The formula, not measured data. The k axis is logarithmic, 1 to 32.
+%   (a) layered, replication follows the transfer, so splitting does not help:
+%       (n+1)/2 B/R, and even a pipelined layered way could not pass (n-1)/2 B/R,
+%   (b) chain, every link carries B once over (n+1)/2 pipelined hops:
+%       (1 + (n-1)/2k) B/R, which falls towards B/R,
+% The y axis title is turned with \rotatebox rather than with a node rotation, because
+% y runs downwards here and a node rotation would come out mirrored.
+\newcommand{\topoplot}{%
+\scalebox{\topoplotzoom}{%
+\begin{tikzpicture}[x=1pt,y=-1pt,topostyle,
+    % 1.0pt here, not the panels' 0.6pt: this plot is drawn at \topoplotzoom, so a
+    % stroke set to match them on paper has to be correspondingly heavier first.
+    axis/.style={draw=ink,line width=1.0pt},
+    ticklbl/.style={inner sep=1.5pt,text=ink,
+                    font=\fontsize{10}{12}\fontfamily{ptm}\selectfont},
+    layered/.style={draw=ink,line width=1.6pt,dash pattern=on 4pt off 2.5pt},
+    chain/.style={draw=ink,line width=1.6pt,line join=round},
+    grid/.style={draw=ink!45,line width=0.5pt,dash pattern=on 1.2pt off 1.6pt}]
+  % Taller than the panels' 148 units, because this one is drawn at \topoplotzoom and
+  % would otherwise come out markedly shorter than them in the row. One unit of
+  % B/R is 58 units here, against 32.75 before.
+  \useasboundingbox (0,22) rectangle (178,222);
+
+  \node[ticklbl,inner sep=0pt] at (14,112.0)
+    {\rotatebox{90}{migration transfer duration ($B/R$)}};
+
+  % axes; k is logarithmic, one doubling every 44pt
+  \draw[axis] (32.0,192.0) -- (172.0,192.0);
+  \draw[axis] (32.0,192.0) -- (32.0,32.0);
+  \foreach \k/\x in {1/32.0,2/76.0,4/120.0,8/164.0} {
+    \draw[axis] (\x,192.0) -- (\x,195.0);
+    \node[ticklbl,anchor=north] at (\x,197.0) {\k};
+  }
+  \draw[axis] (32.0,156.0) -- (29.0,156.0);
+  \node[ticklbl,anchor=east] at (27.0,156.0) {1};
+  \draw[axis] (32.0,98.0) -- (29.0,98.0);
+  \node[ticklbl,anchor=east] at (27.0,98.0) {2};
+  \draw[axis] (32.0,40.0) -- (29.0,40.0);
+  \node[ticklbl,anchor=east] at (27.0,40.0) {3};
+  \node[ticklbl,anchor=north] at (98.0,212.0) {chunks $k$};
+
+  \node[ticklbl,anchor=south west] at (36,36) {$n = 5$};
+
+  % (a) layered: k does not help
+  \draw[layered] (32.0,40.0) -- (164.0,40.0);
+  \node[ticklbl,anchor=south east] at (164.0,38.0) {(a) layered};
+
+  % (b) chain, splitting free: (1 + (n-1)/2k) B/R
+  \draw[chain] (32.0,40.0) -- (54.0,74.0) -- (76.0,98.0) -- (98.0,115.0) -- (120.0,127.0) -- (142.0,135.5) -- (164.0,141.5);
+  \foreach \p in {(32.0,40.0),(76.0,98.0),(120.0,127.0),(164.0,141.5)}
+    \fill[ink] \p circle (1.6pt);
+
+  \node[ticklbl,anchor=north east] at (171.0,152.0) {(b) chain (pipelined)};
+\end{tikzpicture}}%
+}
+
+\newcommand{\topolegend}{%
+\scalebox{\topozoom}{%
+\begin{tikzpicture}[x=1pt,y=-1pt,topostyle]
+  \def\key##1{\tikz[baseline=-2.7pt]\draw[##1] (0pt,0pt) -- (18pt,0pt);\hspace{4pt}}
+  \def\swatch{\tikz[baseline=-2.7pt]\fill[majfill,rounded corners=1.5pt]
+                 (0pt,-3.4pt) rectangle (18pt,3.4pt);\hspace{4pt}}
+  \node[inner sep=0pt,anchor=base] at (0,0) {%
+    \key{notify}Replicated log entry\hspace{18pt}%
+    \key{bulk}Data transfer\hspace{18pt}%
+    \swatch Majority that makes the data durable};
+\end{tikzpicture}}%
+}
+
+

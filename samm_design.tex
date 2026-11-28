@@ -1,0 +1,36 @@
+\section{Design of SAMM}
+\label{sec:design}
+\label{sec:data_organization}
+\label{sec:samm}
+
+\subsection{Architecture Overview}
+\label{sec:samm-arch}
+
+SAMM is a semantic overlay allocator. It interposes a slot-aware region-management layer between the application and a commodity allocator (e.g., jemalloc~\cite{jemalloc}), without replacing it. The architecture is hierarchical, as shown in Figure~\ref{fig:samm-arch}.
+
+
+At the lowest layer, jemalloc supplies large aligned memory blocks. SAMM acquires these blocks, tags each one with a slot owner, and registers it in a central slot table. No block is ever shared between two slots. Within each block, SAMM manages variable-sized segments, one per key-value pair. Allocation, deallocation, and segment reuse are governed by a per-slot free list that threads across all blocks belonging to that slot.
+
+\subsection{Memory Layout}
+\label{sec:samm-layout}
+\label{sec:samm-blocks}
+\label{sec:samm-block-layout}
+\label{sec:samm-segments}
+
+
+\paragraph{Slot table.}
+The slot table is a flat array indexed by slot identifier. Each entry represents one keyspace partition and tracks:
+
+The slot table entry is the sole authoritative index of a slot's memory footprint. During slot migration, SAMM traverses the block list starting at head and emits each block's body as a contiguous byte range. No scatter-gather over the global heap is required.
+
+\paragraph{Block layout.}
+A block is a fixed-size, contiguous memory block obtained from jemalloc (e.g., 2MB, aligned to a hugepage boundary). Each block is exclusively owned by one slot. Rather than a slotted-page directory, SAMM structures each block with a prologue and an epilogue---fixed-size metadata blocks at the low and high ends of the block respectively. The body between them holds a dense, append-style sequence of variable-sized segments (Fig.~\ref{fig:samm}).
+
+\paragraph{Segment layout.}
+A segment is the atomic unit of storage for a single key-value pair. Segments are variable-sized. Each segment is exactly large enough to hold the fixed-size header plus the key and value payloads, with no wasted padding beyond alignment. The segment format is:
+
+The free list is implemented as an intrusive linked list that overlays the first 8 bytes of the payload region. When \texttt{FLAG\_FREE} is set, those bytes are reinterpreted as a \texttt{next\_free} pointer chaining this segment to the next free segment in the slot's free list, which may reside in any of the slot's blocks without any auxiliary data structure.
+
+On allocation, SAMM returns to the caller a direct pointer to the first byte of the payload region immediately following the segment header. The caller writes the key and value directly into the block at that address, incurring no intermediate copy.
+
+When SAMM needs a new block for a slot, it invokes the arena's alloc hook, receiving a hugepage-aligned region that it then initialises with a prologue and epilogue before linking it to the slot's block list. When a slot's block becomes empty (all segments freed), SAMM unlinks it from the doubly-linked list and returns it to jemalloc via the dalloc hook. This delegation avoids reimplementing OS-level concerns such as NUMA-aware placement, transparent hugepage promotion, and background purging.

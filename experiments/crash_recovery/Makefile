@@ -18,7 +18,7 @@ BASE_BAR_H  ?= 0.74
 BASE_GLEG   ?= 1
 BASE_XLAB   ?= Time (s)
 
-FONT_DIR ?= $(patsubst %/,%,$(dir $(shell kpsewhich texgyretermes-regular.otf 2>/dev/null)))
+FONT_DIR ?= $(patsubst %/,%,$(dir $(shell kpsewhich texgyretermes-regular.otf)))
 ifneq ($(FONT_DIR),)
 export FONT_DIR
 endif
@@ -55,7 +55,7 @@ CSV       := derived/ycsb/ycsb_per_second.csv
 
 ifeq ($(wildcard data/HEALTHY),)
 all:
-	@echo "experiments/crash_recovery: no data/, keeping the committed PDFs"
+	@echo experiments/crash_recovery: no data/, keeping the committed PDFs
 else
 
 all: $(PHASE_PDF) $(SMALL_PDF) figures/grid6.pdf figures/lat6.pdf figures/healthy_ycsb.pdf $(CSV)

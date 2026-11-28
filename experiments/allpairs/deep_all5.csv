@@ -1,0 +1,121 @@
+panel,run_tag,pair,group,group_nodes,round,lane,start_s,end_s,duration_s
+deep — every group 3 nodes (depth 2),D3_r2,A,sg4,3,1,Donor to recipient transfer,0.000,0.508,0.508
+deep — every group 3 nodes (depth 2),D3_r2,A,sg4,3,1,Chain replication,0.128,0.634,0.506
+deep — every group 3 nodes (depth 2),D3_r2,A,sg4,3,1,Index update on leader,0.128,0.634,0.506
+deep — every group 3 nodes (depth 2),D3_r2,A,sg4,3,2,Donor to recipient transfer,0.538,1.045,0.507
+deep — every group 3 nodes (depth 2),D3_r2,A,sg4,3,1,Async chain replication,0.634,1.193,0.559
+deep — every group 3 nodes (depth 2),D3_r2,A,sg4,3,2,Chain replication,0.666,1.173,0.507
+deep — every group 3 nodes (depth 2),D3_r2,A,sg4,3,2,Index update on leader,0.666,1.172,0.506
+deep — every group 3 nodes (depth 2),D3_r2,A,sg4,3,3,Donor to recipient transfer,1.066,1.571,0.505
+deep — every group 3 nodes (depth 2),D3_r2,A,sg4,3,2,Async chain replication,1.173,1.816,0.643
+deep — every group 3 nodes (depth 2),D3_r2,A,sg4,3,3,Chain replication,1.193,1.707,0.514
+deep — every group 3 nodes (depth 2),D3_r2,A,sg4,3,3,Index update on leader,1.193,1.706,0.513
+deep — every group 3 nodes (depth 2),D3_r2,A,sg4,3,4,Donor to recipient transfer,1.590,2.098,0.508
+deep — every group 3 nodes (depth 2),D3_r2,A,sg4,3,3,Async chain replication,1.707,2.424,0.717
+deep — every group 3 nodes (depth 2),D3_r2,A,sg4,3,4,Chain replication,1.718,2.232,0.514
+deep — every group 3 nodes (depth 2),D3_r2,A,sg4,3,4,Index update on leader,1.718,2.231,0.513
+deep — every group 3 nodes (depth 2),D3_r2,A,sg4,3,4,Async chain replication,2.232,2.987,0.755
+deep — every group 3 nodes (depth 2),D3_r2,B,sg5,3,1,Donor to recipient transfer,2.305,2.807,0.502
+deep — every group 3 nodes (depth 2),D3_r2,B,sg5,3,1,Chain replication,2.433,2.937,0.504
+deep — every group 3 nodes (depth 2),D3_r2,B,sg5,3,1,Index update on leader,2.433,2.936,0.503
+deep — every group 3 nodes (depth 2),D3_r2,B,sg5,3,2,Donor to recipient transfer,2.833,3.335,0.502
+deep — every group 3 nodes (depth 2),D3_r2,B,sg5,3,1,Async chain replication,2.937,3.496,0.559
+deep — every group 3 nodes (depth 2),D3_r2,B,sg5,3,2,Chain replication,2.960,3.467,0.507
+deep — every group 3 nodes (depth 2),D3_r2,B,sg5,3,2,Index update on leader,2.960,3.467,0.507
+deep — every group 3 nodes (depth 2),D3_r2,B,sg5,3,3,Donor to recipient transfer,3.355,3.856,0.501
+deep — every group 3 nodes (depth 2),D3_r2,B,sg5,3,2,Async chain replication,3.467,4.103,0.636
+deep — every group 3 nodes (depth 2),D3_r2,B,sg5,3,3,Chain replication,3.482,3.991,0.509
+deep — every group 3 nodes (depth 2),D3_r2,B,sg5,3,3,Index update on leader,3.482,3.990,0.508
+deep — every group 3 nodes (depth 2),D3_r2,B,sg5,3,4,Donor to recipient transfer,3.877,4.379,0.502
+deep — every group 3 nodes (depth 2),D3_r2,B,sg5,3,3,Async chain replication,3.991,4.711,0.720
+deep — every group 3 nodes (depth 2),D3_r2,B,sg5,3,4,Chain replication,4.003,4.515,0.512
+deep — every group 3 nodes (depth 2),D3_r2,B,sg5,3,4,Index update on leader,4.003,4.515,0.512
+deep — every group 3 nodes (depth 2),D3_r2,B,sg5,3,4,Async chain replication,4.515,5.264,0.749
+deep — every group 3 nodes (depth 2),D3_r2,C,sg6,3,1,Donor to recipient transfer,4.618,5.124,0.506
+deep — every group 3 nodes (depth 2),D3_r2,C,sg6,3,1,Chain replication,4.746,5.249,0.503
+deep — every group 3 nodes (depth 2),D3_r2,C,sg6,3,1,Index update on leader,4.746,5.248,0.502
+deep — every group 3 nodes (depth 2),D3_r2,C,sg6,3,2,Donor to recipient transfer,5.212,5.719,0.507
+deep — every group 3 nodes (depth 2),D3_r2,C,sg6,3,1,Async chain replication,5.249,5.851,0.602
+deep — every group 3 nodes (depth 2),D3_r2,C,sg6,3,2,Chain replication,5.340,5.844,0.504
+deep — every group 3 nodes (depth 2),D3_r2,C,sg6,3,2,Index update on leader,5.340,5.842,0.502
+deep — every group 3 nodes (depth 2),D3_r2,C,sg6,3,3,Donor to recipient transfer,5.795,6.301,0.506
+deep — every group 3 nodes (depth 2),D3_r2,C,sg6,3,2,Async chain replication,5.844,6.456,0.612
+deep — every group 3 nodes (depth 2),D3_r2,C,sg6,3,3,Chain replication,5.922,6.426,0.504
+deep — every group 3 nodes (depth 2),D3_r2,C,sg6,3,3,Index update on leader,5.922,6.425,0.503
+deep — every group 3 nodes (depth 2),D3_r2,C,sg6,3,4,Donor to recipient transfer,6.367,6.874,0.507
+deep — every group 3 nodes (depth 2),D3_r2,C,sg6,3,3,Async chain replication,6.426,7.053,0.627
+deep — every group 3 nodes (depth 2),D3_r2,C,sg6,3,4,Chain replication,6.495,7.006,0.511
+deep — every group 3 nodes (depth 2),D3_r2,C,sg6,3,4,Index update on leader,6.495,7.005,0.510
+deep — every group 3 nodes (depth 2),D3_r2,C,sg6,3,4,Async chain replication,7.006,7.594,0.588
+deep — every group 3 nodes (depth 2),D3_r2,,sg4,3,,round durable,0.643,,
+deep — every group 3 nodes (depth 2),D3_r2,,sg4,3,,round durable,1.180,,
+deep — every group 3 nodes (depth 2),D3_r2,,sg4,3,,round durable,1.717,,
+deep — every group 3 nodes (depth 2),D3_r2,,sg4,3,,round durable,2.253,,
+deep — every group 3 nodes (depth 2),D3_r2,,sg5,3,,round durable,2.946,,
+deep — every group 3 nodes (depth 2),D3_r2,,sg5,3,,round durable,3.480,,
+deep — every group 3 nodes (depth 2),D3_r2,,sg5,3,,round durable,4.016,,
+deep — every group 3 nodes (depth 2),D3_r2,,sg5,3,,round durable,4.526,,
+deep — every group 3 nodes (depth 2),D3_r2,,sg6,3,,round durable,5.259,,
+deep — every group 3 nodes (depth 2),D3_r2,,sg6,3,,round durable,5.853,,
+deep — every group 3 nodes (depth 2),D3_r2,,sg6,3,,round durable,6.436,,
+deep — every group 3 nodes (depth 2),D3_r2,,sg6,3,,round durable,7.025,,
+deep — every group 5 nodes (depth 3),E5_r1,A,sg4,5,1,Donor to recipient transfer,0.000,0.506,0.506
+deep — every group 5 nodes (depth 3),E5_r1,A,sg4,5,1,Chain replication,0.128,1.172,1.044
+deep — every group 5 nodes (depth 3),E5_r1,A,sg4,5,1,Index update on leader,0.128,0.631,0.503
+deep — every group 5 nodes (depth 3),E5_r1,A,sg4,5,2,Donor to recipient transfer,0.535,1.042,0.507
+deep — every group 5 nodes (depth 3),E5_r1,A,sg4,5,2,Chain replication,0.663,1.764,1.101
+deep — every group 5 nodes (depth 3),E5_r1,A,sg4,5,2,Index update on leader,0.663,1.174,0.511
+deep — every group 5 nodes (depth 3),E5_r1,A,sg4,5,3,Donor to recipient transfer,1.072,1.577,0.505
+deep — every group 5 nodes (depth 3),E5_r1,A,sg4,5,1,Async chain replication,1.172,2.270,1.098
+deep — every group 5 nodes (depth 3),E5_r1,A,sg4,5,3,Chain replication,1.199,2.391,1.192
+deep — every group 5 nodes (depth 3),E5_r1,A,sg4,5,3,Index update on leader,1.199,1.711,0.512
+deep — every group 5 nodes (depth 3),E5_r1,A,sg4,5,4,Donor to recipient transfer,1.622,2.132,0.510
+deep — every group 5 nodes (depth 3),E5_r1,A,sg4,5,4,Chain replication,1.750,2.959,1.209
+deep — every group 5 nodes (depth 3),E5_r1,A,sg4,5,4,Index update on leader,1.750,2.262,0.512
+deep — every group 5 nodes (depth 3),E5_r1,A,sg4,5,2,Async chain replication,1.764,2.882,1.118
+deep — every group 5 nodes (depth 3),E5_r1,A,sg4,5,3,Async chain replication,2.391,3.505,1.114
+deep — every group 5 nodes (depth 3),E5_r1,A,sg4,5,4,Async chain replication,2.959,4.056,1.097
+deep — every group 5 nodes (depth 3),E5_r1,B,sg5,5,1,Donor to recipient transfer,3.021,3.524,0.503
+deep — every group 5 nodes (depth 3),E5_r1,B,sg5,5,1,Chain replication,3.148,4.183,1.035
+deep — every group 5 nodes (depth 3),E5_r1,B,sg5,5,1,Index update on leader,3.148,3.653,0.505
+deep — every group 5 nodes (depth 3),E5_r1,B,sg5,5,2,Donor to recipient transfer,3.556,4.058,0.502
+deep — every group 5 nodes (depth 3),E5_r1,B,sg5,5,2,Chain replication,3.683,4.772,1.089
+deep — every group 5 nodes (depth 3),E5_r1,B,sg5,5,2,Index update on leader,3.683,4.194,0.511
+deep — every group 5 nodes (depth 3),E5_r1,B,sg5,5,3,Donor to recipient transfer,4.081,4.583,0.502
+deep — every group 5 nodes (depth 3),E5_r1,B,sg5,5,1,Async chain replication,4.183,5.242,1.059
+deep — every group 5 nodes (depth 3),E5_r1,B,sg5,5,3,Chain replication,4.208,5.382,1.174
+deep — every group 5 nodes (depth 3),E5_r1,B,sg5,5,3,Index update on leader,4.208,4.721,0.513
+deep — every group 5 nodes (depth 3),E5_r1,B,sg5,5,4,Donor to recipient transfer,4.602,5.105,0.503
+deep — every group 5 nodes (depth 3),E5_r1,B,sg5,5,4,Chain replication,4.729,5.933,1.204
+deep — every group 5 nodes (depth 3),E5_r1,B,sg5,5,4,Index update on leader,4.729,5.242,0.513
+deep — every group 5 nodes (depth 3),E5_r1,B,sg5,5,2,Async chain replication,4.772,5.849,1.077
+deep — every group 5 nodes (depth 3),E5_r1,B,sg5,5,3,Async chain replication,5.382,6.450,1.068
+deep — every group 5 nodes (depth 3),E5_r1,B,sg5,5,4,Async chain replication,5.933,6.986,1.053
+deep — every group 5 nodes (depth 3),E5_r1,C,sg6,5,1,Donor to recipient transfer,6.037,6.539,0.502
+deep — every group 5 nodes (depth 3),E5_r1,C,sg6,5,1,Chain replication,6.163,7.217,1.054
+deep — every group 5 nodes (depth 3),E5_r1,C,sg6,5,1,Index update on leader,6.163,6.664,0.501
+deep — every group 5 nodes (depth 3),E5_r1,C,sg6,5,2,Donor to recipient transfer,6.619,7.122,0.503
+deep — every group 5 nodes (depth 3),E5_r1,C,sg6,5,2,Chain replication,6.745,7.819,1.074
+deep — every group 5 nodes (depth 3),E5_r1,C,sg6,5,2,Index update on leader,6.745,7.256,0.511
+deep — every group 5 nodes (depth 3),E5_r1,C,sg6,5,3,Donor to recipient transfer,7.208,7.712,0.504
+deep — every group 5 nodes (depth 3),E5_r1,C,sg6,5,1,Async chain replication,7.217,8.361,1.144
+deep — every group 5 nodes (depth 3),E5_r1,C,sg6,5,3,Chain replication,7.336,8.427,1.091
+deep — every group 5 nodes (depth 3),E5_r1,C,sg6,5,3,Index update on leader,7.336,7.845,0.509
+deep — every group 5 nodes (depth 3),E5_r1,C,sg6,5,2,Async chain replication,7.819,8.972,1.153
+deep — every group 5 nodes (depth 3),E5_r1,C,sg6,5,4,Donor to recipient transfer,7.819,8.333,0.514
+deep — every group 5 nodes (depth 3),E5_r1,C,sg6,5,4,Chain replication,7.953,9.042,1.089
+deep — every group 5 nodes (depth 3),E5_r1,C,sg6,5,4,Index update on leader,7.953,8.465,0.512
+deep — every group 5 nodes (depth 3),E5_r1,C,sg6,5,3,Async chain replication,8.427,9.531,1.104
+deep — every group 5 nodes (depth 3),E5_r1,C,sg6,5,4,Async chain replication,9.042,10.121,1.079
+deep — every group 5 nodes (depth 3),E5_r1,,sg4,5,,round durable,1.193,,
+deep — every group 5 nodes (depth 3),E5_r1,,sg4,5,,round durable,1.771,,
+deep — every group 5 nodes (depth 3),E5_r1,,sg4,5,,round durable,2.398,,
+deep — every group 5 nodes (depth 3),E5_r1,,sg4,5,,round durable,2.976,,
+deep — every group 5 nodes (depth 3),E5_r1,,sg5,5,,round durable,4.186,,
+deep — every group 5 nodes (depth 3),E5_r1,,sg5,5,,round durable,4.789,,
+deep — every group 5 nodes (depth 3),E5_r1,,sg5,5,,round durable,5.393,,
+deep — every group 5 nodes (depth 3),E5_r1,,sg5,5,,round durable,5.944,,
+deep — every group 5 nodes (depth 3),E5_r1,,sg6,5,,round durable,7.228,,
+deep — every group 5 nodes (depth 3),E5_r1,,sg6,5,,round durable,7.842,,
+deep — every group 5 nodes (depth 3),E5_r1,,sg6,5,,round durable,8.450,,
+deep — every group 5 nodes (depth 3),E5_r1,,sg6,5,,round durable,9.067,,

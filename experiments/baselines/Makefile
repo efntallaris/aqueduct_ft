@@ -1,7 +1,7 @@
 
 PY := python3
 
-FONT_DIR ?= $(patsubst %/,%,$(dir $(shell kpsewhich texgyretermes-regular.otf 2>/dev/null)))
+FONT_DIR ?= $(patsubst %/,%,$(dir $(shell kpsewhich texgyretermes-regular.otf)))
 ifneq ($(FONT_DIR),)
 export FONT_DIR
 endif
@@ -28,6 +28,16 @@ NODATA_5050      ?= 1
 .PHONY: all force clean norepl wl5050 legend
 
 PAPER_FIGS := figures/baselines.pdf figures/baselines_5050.pdf figures/baselines_legend.pdf
+
+# Guard, matching experiments/crash_recovery and experiments/replica_count: the raw
+# logs under data/ are not in git, so in a plain clone there is nothing to redraw and
+# the committed PDFs under figures/ are what the paper uses. Without this, `make
+# figures` (and therefore every latexmk run, via .latexmkrc) stops with
+# "No rule to make target 'data/955/aqueduct_ft.csv'".
+ifeq ($(wildcard data/955),)
+all:
+	@echo experiments/baselines: no data/, keeping the committed PDFs
+else
 
 all: $(PAPER_FIGS)
 
@@ -70,6 +80,8 @@ figures/norepl_vs_3rep.pdf: scripts/plot_norepl_vs_3rep.py \
         data/5050/aqueduct.csv data/5050/aqueduct_ft.csv
 	@mkdir -p figures
 	FIG_W=$(FIG_W) $(PY) scripts/plot_norepl_vs_3rep.py data $@
+
+endif
 
 force:
 	@rm -f $(PAPER_FIGS)
